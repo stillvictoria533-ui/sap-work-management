@@ -1,0 +1,199 @@
+#sap-desk-design .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--sd-ink);
+  text-decoration: none;
+  transition: background 0.16s;
+}
+#sap-desk-design .nav-item:hover {
+  background: color-mix(in srgb, var(--sd-active) 40%, transparent);
+}
+#sap-desk-design .nav-item[aria-current="page"] {
+  background: var(--sd-active);
+}
+#sap-desk-design .sd-nav a .sd-count {
+  margin-left: auto;
+  color: var(--sd-muted);
+  font-size: 11px;
+}
+#sap-desk-design .sd-top-actions a {
+  color: var(--sd-muted);
+  font-size: 12px;
+}
+#sap-desk-design .sd-detail-title {
+  font-size: 27px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+#sap-desk-design .sd-error {
+  margin: 12px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#sap-desk-design .page-note {
+  margin-bottom: 22px;
+}
+#sap-desk-design .event-files {
+  margin-top: 9px;
+}
+#sap-desk-design .reply-files {
+  margin: 18px 0;
+}
+#sap-desk-design .selected-files {
+  font-size: 12px;
+  color: var(--sd-muted);
+  margin-top: 10px;
+}
+#sap-desk-design .selected-files > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+#sap-desk-design .selected-files span {
+  min-width: 0;
+}
+#sap-desk-design .sd-upload {
+  display: block;
+}
+#sap-desk-design .sd-upload label {
+  margin: 0;
+}
+#sap-desk-design .sd-upload input {
+  margin: 0;
+}
+#sap-desk-design .export-menu {
+  position: relative;
+  z-index: 3;
+}
+#sap-desk-design .export-menu summary {
+  list-style: none;
+  cursor: pointer;
+}
+#sap-desk-design .export-menu > div {
+  position: absolute;
+  right: 0;
+  top: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px;
+  width: 230px;
+  border: 1px solid var(--sd-line);
+  border-radius: 8px;
+  background: var(--sd-paper);
+  box-shadow: 0 5px 15px #0000000c;
+}
+#sap-desk-design .export-menu small {
+  font-size: 11px;
+  color: var(--sd-muted);
+}
+#sap-desk-design .checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--sd-muted);
+  margin-bottom: 20px;
+}
+#sap-desk-design .checkbox-line input {
+  width: 16px;
+  height: 16px;
+}
+#sap-desk-design .notice-row {
+  display: flex;
+  gap: 13px;
+  align-items: baseline;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--sd-line);
+}
+#sap-desk-design .notice-row p {
+  margin: 7px 0 3px;
+}
+#sap-desk-design .unread-dot {
+  color: var(--sd-accent);
+  flex: 0 0 6px;
+}
+#sap-desk-design .delivery-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--sd-line);
+}
+#sap-desk-design .delivery-row .sd-status {
+  margin-left: 12px;
+}
+#sap-desk-design .delivery-row p {
+  margin-top: 8px;
+}
+#sap-desk-design .delivery-row strong {
+  font-weight: 500;
+  font-size: 13px;
+}
+#sap-desk-design .account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+#sap-desk-design .account-actions button {
+  white-space: nowrap;
+}
+#sap-desk-design .sd-accounts-table th:first-child {
+  width: 35%;
+}
+#sap-desk-design .sd-accounts-table th:last-child {
+  width: 23%;
+}
+#sap-desk-design .temporary-password {
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+#sap-desk-design .sd-inline-confirm {
+  margin-bottom: 22px;
+}
+#sap-desk-design .sd-ticket-title {
+  overflow-wrap: anywhere;
+}
+#sap-desk-design .sd-avatar {
+  display: inline-flex;
+}
+#sap-desk-design .sd-table th,
+#sap-desk-design .sd-ticket-sub,
+#sap-desk-design .sd-status,
+#sap-desk-design .sd-event-text,
+#sap-desk-design .sd-meta-pair dt,
+#sap-desk-design .sd-message-head time {
+  font-size: 11px;
+}
+@media (max-width: 650px) {
+  #sap-desk-design .sd-nav .nav-item {
+    padding: 8px;
+    font-size: 11px;
+    gap: 5px;
+    min-height: 40px;
+  }
+  #sap-desk-design .sd-nav .nav-item svg,
+  #sap-desk-design .sd-nav .sd-count {
+    display: none;
+  }
+  #sap-desk-design .account-actions {
+    justify-content: flex-start;
+  }
+  #sap-desk-design .sd-detail-title {
+    font-size: 23px;
+  }
+  #sap-desk-design .delivery-row {
+    align-items: flex-start;
+  }
+  #sap-desk-design .sd-detail-grid > aside {
+    width: 100%;
+  }
+}

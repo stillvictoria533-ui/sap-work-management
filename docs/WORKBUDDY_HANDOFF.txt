@@ -1,0 +1,19 @@
+SAP Desk 后台运维交接（2026-10-12）
+
+目标实例 lhins-9wkf7wc5，na-siliconvalley，43.130.36.105。
+平台 /opt/sapdesk；Docker Compose 项目 sapdesk，api/worker/db/web 四个服务。不得改动其他应用。
+
+已完成四状态流程、独立状态操作、导航选中修复、HTTPS 自动续期。
+已配置本机每日03:00–03:05备份，成功每日备份保留14天；每分钟监测与钉钉运维告警。
+管理员群 SAP Desk 管理平台，机器人 SAP Desk 运维告警，已验证测试消息。
+备份后恢复步骤已补上 Nginx reload 与公网健康验证，避免旧容器地址导致502。
+不购买COS，无异地备份；没有独立外部监测；未做完整灾难恢复演练。
+
+本次已向 WorkBuddy 现有任务“一键查询我的 Lighthouse 实例（首次使用请先点击对话框上方连接器完成授权）”发送只读后台验证任务。
+要求：确认连接器真实工具与命令执行能力；检查实例、Compose状态、systemd定时任务、备份/监测结果、HTTPS健康。
+禁止读取/输出 .env.production、/etc/sapdesk-ops.env、私钥、Token、Webhook、工单正文与附件。
+禁止本次重启/部署/防火墙变更/删除/新增收费资源/重跑备份/发送群消息。
+输出目标、检查、操作、证据（命令ID/退出码/时间）、风险与待办。
+
+后续协作：Codex负责代码、测试、发布包与精确操作说明；WorkBuddy在用户指定任务范围内通过云连接器执行，回传日志摘要；避免两边同时写服务器。
+2026-10-13：已配置并认证本机 Codex 的 tencent-lighthouse MCP，启动握手和12个项目运维工具验证通过；真实API查询确认 na-siliconvalley / lhins-9wkf7wc5 / 43.130.36.105，状态RUNNING。TAT只读命令验证通过，操作系统Linux，/opt/sapdesk目录存在；可在具体授权范围内直接通过MCP执行后续操作。步骤与证据见 docs/TENCENT_MCP.md。SSH通道仍未验证；不要提取/复用WorkBuddy内部授权令牌。

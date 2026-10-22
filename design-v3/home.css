@@ -1,0 +1,93 @@
+@font-face{font-family:'DM Sans';src:url('./assets/dm-sans-regular.ttf') format('truetype');font-weight:400;font-display:swap}
+:root{color-scheme:light;--home-cream:#f5eddd;--home-ink:#292925;--home-line:#d9d0be;--home-blue:#1645a0;--home-coral:#ec7050;--home-white:#fffdf7}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:105px}body{margin:0;background:var(--home-cream);color:var(--home-ink)}button,a,summary{touch-action:manipulation}button,a{cursor:pointer}button:disabled{cursor:default}a{color:inherit;text-decoration:none}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #d75938;outline-offset:4px}
+#sap-desk-design{font-family:'DM Sans','PingFang SC','Microsoft YaHei',sans-serif;color-scheme:light;--sd-bg:#fffcf8;--sd-paper:#fffefd;--sd-side:#fbf7ef;--sd-ink:#2b2926;--sd-muted:#77716a;--sd-line:#e5e0d8;--sd-accent:#ed7354;--sd-accent-ink:#a83e27;--sd-on:#2b211c;--sd-tint:#f0ece5;--sd-green:#706956;--sd-green-bg:#eeeade;--sd-blue:#666c77;--sd-blue-bg:#edf0f3;--sd-amber:#9b5536;--sd-amber-bg:#fff0e4;--sd-red:#a84835;--sd-active:#e9e4dc;--sd-gridline:#eee8e155}
+#sap-desk-design .sd-preview{display:none}
+#sap-desk-design .sd-home{background:var(--home-cream);background-image:linear-gradient(#776b4410 1px,transparent 1px),linear-gradient(90deg,#776b4410 1px,transparent 1px);background-size:24px 24px;color:var(--home-ink);overflow:clip}
+#sap-desk-design .sd-home-header{position:fixed;z-index:30;top:18px;left:50%;transform:translateX(-50%);width:min(760px,calc(100% - 48px));display:flex;justify-content:space-between;align-items:center;gap:20px;padding:9px 10px 9px 19px;background:var(--home-white);border:1px solid #d9d2c7;border-radius:4px;box-shadow:0 2px 5px #32290909}
+#sap-desk-design .sd-home-brand{display:flex;align-items:center;gap:12px;font-size:23px;font-weight:600;letter-spacing:-1px;white-space:nowrap}
+#sap-desk-design .sd-home-brand .sd-mark{grid-template-columns:11px 11px;gap:3px}
+#sap-desk-design .sd-home-brand .sd-mark b{height:11px;background:var(--home-blue);border-color:var(--home-blue)}
+#sap-desk-design .sd-home-brand .sd-mark b:nth-child(3){background:transparent}
+#sap-desk-design .sd-home-brand-note{font-size:11px;font-weight:400;letter-spacing:.1em;color:#777266;margin-left:5px}
+#sap-desk-design .sd-home-header nav{display:flex;align-items:center;gap:34px;font-size:12px}
+#sap-desk-design .sd-how-link{color:#625e54;white-space:nowrap}
+#sap-desk-design .sd-home-entry{background:var(--home-blue);color:var(--home-white);display:inline-flex;align-items:center;gap:13px;border:1px solid #123580;border-radius:3px;padding:5px 16px 5px 5px;min-height:44px;font-size:12px;font-weight:500;white-space:nowrap;transition:transform .2s,background .2s}
+#sap-desk-design .sd-home-entry:hover{background:#10347d;transform:translateY(-1px)}
+#sap-desk-design .sd-entry-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:var(--home-coral);color:#fff8eb;border:1px solid #fa9478;border-radius:1px}
+#sap-desk-design .sd-entry-icon svg{width:19px;height:19px}
+#sap-desk-design .sd-home-hero{padding:149px 35px 28px;max-width:1380px;margin:auto;text-align:center}
+#sap-desk-design .sd-home-hero h1{font-size:clamp(64px,7.8vw,116px);line-height:1.14;font-weight:600;letter-spacing:-.075em;margin:0 0 42px;padding-right:.07em;color:#292925}
+#sap-desk-design .sd-home-hero h1 span{display:block}
+#sap-desk-design .sd-home-subline{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.11em;color:#746e60;margin:0 1px}
+#sap-desk-design .sd-home-subline a{display:flex;gap:9px;align-items:center;letter-spacing:.03em;padding:6px 0}
+#sap-desk-design .sd-journey{position:relative;height:230vh;margin:0 26px;min-height:1600px}
+#sap-desk-design .sd-journey-stage{position:sticky;top:98px;height:calc(100svh - 125px);min-height:510px;max-height:850px;background:var(--home-blue);overflow:hidden;isolation:isolate;border:1px solid #113788;border-radius:2px;perspective:1600px}
+#sap-desk-design .sd-stage-grid{position:absolute;inset:0;background-image:linear-gradient(#ebeddf0c 1px,transparent 1px),linear-gradient(90deg,#ebeddf0c 1px,transparent 1px);background-size:42px 42px;transform:scale(1.18);opacity:.6}
+#sap-desk-design .sd-stage-arch{position:absolute;right:-8%;top:-18%;width:69%;height:112%;background:#2c59ab;transform:rotate(-18deg) translate3d(0,0,0);border:1px solid #8da4cb25}
+#sap-desk-design .sd-stage-arch div{position:absolute;inset:15% 17% 8%;background:#0f347c;border-radius:48% 48% 0 0;border:1px solid #7288b255}
+#sap-desk-design .sd-stage-shadow{position:absolute;left:20%;bottom:-25%;width:82%;height:41%;background:#0c2d70;transform:rotate(-18deg);opacity:.55}
+#sap-desk-design .sd-stage-copy{position:absolute;left:5.8%;top:31%;width:36%;height:220px;color:var(--home-white);z-index:3}
+#sap-desk-design .sd-stage-copy-panel{position:absolute;inset:0;opacity:0;transform:translate3d(0,24px,0);pointer-events:none}
+#sap-desk-design .sd-stage-copy-panel:first-child{opacity:1;transform:none}
+#sap-desk-design .sd-stage-copy-panel>span{font-size:11px;letter-spacing:.14em;color:#c1cde5}
+#sap-desk-design .sd-stage-copy-panel h2{font-size:clamp(27px,3.1vw,46px);font-weight:400;line-height:1.4;letter-spacing:-.04em;margin:19px 0 20px}
+#sap-desk-design .sd-stage-copy-panel p{font-size:12px;color:#cbd7eb;line-height:1.8}
+#sap-desk-design .sd-paper-scene{position:absolute;right:14%;top:50%;width:320px;height:408px;transform:translate3d(0,-50%,0);transform-style:preserve-3d;z-index:4}
+#sap-desk-design .sd-paper-back{position:absolute;inset:0;background:#e9e0cd;border:1px solid #c2b99f;border-radius:2px;box-shadow:16px 23px 0 #10296225;transform-origin:50% 88%}
+#sap-desk-design .sd-paper-back-far{transform:translate3d(48px,-6px,-60px) rotate(14deg);background:#b9c9df}
+#sap-desk-design .sd-paper-back-near{transform:translate3d(21px,-11px,-30px) rotate(7deg)}
+#sap-desk-design .sd-coral-tab{position:absolute;width:70px;height:134px;background:var(--home-coral);right:-20px;top:69px;border-radius:2px;transform:rotate(12deg);box-shadow:2px 5px 0 #19346822}
+#sap-desk-design .sd-paper{position:absolute;inset:0;transform:rotate(-9deg);background:var(--home-white);border:1px solid #d7cfbd;border-radius:2px;box-shadow:0 25px 35px #0c22542b;overflow:hidden;transform-origin:50% 75%;color:#2c2a26}
+#sap-desk-design .sd-paper-top{height:60px;border-bottom:1px solid #ddd6c8;display:flex;align-items:center;justify-content:space-between;margin:0 27px;font-size:11px;letter-spacing:.08em;color:#706858}
+#sap-desk-design .sd-paper-module{border:1px solid #d8cdbc;padding:2px 5px;border-radius:2px;font-size:10px}
+#sap-desk-design .sd-paper-panel{position:absolute;inset:85px 27px 26px;opacity:0;transform:translate3d(35px,0,0);pointer-events:none}
+#sap-desk-design .sd-paper-panel[data-paper-panel="0"]{opacity:1;transform:none}
+#sap-desk-design .sd-paper-eyebrow{font-size:10px;letter-spacing:.12em;color:#8b7561}
+#sap-desk-design .sd-paper-panel h3{font-size:28px;line-height:1.4;font-weight:500;letter-spacing:-.05em;margin:17px 0 18px}
+#sap-desk-design .sd-paper-panel p{font-size:12px;line-height:1.9;color:#756c61;margin:0}
+#sap-desk-design .sd-paper-rule{width:34px;height:2px;background:var(--home-coral);margin:20px 0 18px}
+#sap-desk-design .sd-paper-panel footer{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#827768;border-top:1px solid #e6ded0;padding-top:15px;gap:8px}
+#sap-desk-design .sd-paper-status{padding:3px 8px;background:#ede8de;color:#6b675c;border-radius:2px;font-size:10px}
+#sap-desk-design .sd-paper-conversation{margin-top:20px;border-left:1px solid #d6c9b7;padding-left:14px}
+#sap-desk-design .sd-paper-conversation>div{margin-bottom:17px}
+#sap-desk-design .sd-paper-conversation b{font-weight:500;font-size:11px;color:#9d543c}
+#sap-desk-design .sd-paper-conversation p{font-size:11px;margin-top:5px}
+#sap-desk-design .sd-complete-symbol{width:36px;height:36px;background:#1c438a;color:#fff8e8;display:flex;align-items:center;justify-content:center;margin-bottom:17px;border-radius:50%}
+#sap-desk-design .sd-complete-symbol svg{width:22px;height:22px}
+#sap-desk-design .sd-paper-complete h3{font-size:38px;line-height:1.25;margin-top:12px;margin-bottom:13px}
+#sap-desk-design .sd-paper-complete p{font-size:11px;max-width:185px}
+#sap-desk-design .sd-journey-bottom{position:absolute;bottom:29px;left:5.8%;right:5.8%;display:flex;align-items:center;justify-content:space-between;gap:15px;color:#d5dff0;z-index:7}
+#sap-desk-design .sd-scroll-label{font-size:11px;letter-spacing:.1em}
+#sap-desk-design .sd-journey-steps{display:flex;gap:19px}
+#sap-desk-design .sd-journey-steps button{padding:9px 0;color:#c5d0e7;background:transparent;border:0;border-top:1px solid #7491c37a;font-size:11px;letter-spacing:.08em;min-width:74px;text-align:left;transition:border-color .2s,color .2s}
+#sap-desk-design .sd-journey-steps button span{margin-left:8px}
+#sap-desk-design .sd-journey-steps button[aria-pressed=true]{color:#fff5dc;border-top-color:var(--home-coral)}
+#sap-desk-design .sd-home-end{text-align:center;padding:110px 24px 100px}
+#sap-desk-design .sd-end-eyebrow{font-size:10px;letter-spacing:.18em;color:#847961}
+#sap-desk-design .sd-home-end h2{font-size:clamp(38px,5vw,70px);line-height:1.3;font-weight:400;letter-spacing:-.07em;margin:29px 0 34px}
+#sap-desk-design .sd-home-footer{margin:0 32px;padding:24px 0;border-top:1px solid #d7cdbb;display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:10px;letter-spacing:.06em;color:#8a7e68}
+#sap-desk-design .sd-home-login{min-height:100svh;background:var(--home-cream);background-image:linear-gradient(#776b4410 1px,transparent 1px),linear-gradient(90deg,#776b4410 1px,transparent 1px);background-size:24px 24px}
+#sap-desk-design #sd-login-screen.sd-login{border:0;border-radius:0;overflow:visible}
+#sap-desk-design .sd-simple-login-header{display:flex;align-items:center;justify-content:space-between;padding:28px 34px;gap:20px}
+#sap-desk-design .sd-simple-login-header .sd-brand{font-size:23px}
+#sap-desk-design .sd-simple-login-header button{font-size:12px;color:#756c5c;display:flex;align-items:center;gap:7px}
+#sap-desk-design .sd-simple-login-content{max-width:430px;margin:34px auto 0;padding:37px 34px 34px;background:#fffdf8;border:1px solid #ded5c5;border-radius:6px;box-shadow:0 8px 25px #6f583c08}
+#sap-desk-design .sd-simple-login-content .sd-login-panel{padding:0;background:transparent;display:block}
+#sap-desk-design .sd-simple-login-content .sd-login-panel h2{font-size:29px;margin-bottom:9px}
+#sap-desk-design .sd-simple-login-content .sd-login-panel>p{font-size:12px;margin-bottom:28px}
+#sap-desk-design .sd-simple-login-content .sd-demo-area{margin-top:20px;padding-top:15px;font-size:11px;color:#837666}
+#sap-desk-design .sd-simple-login-content .sd-demo-area summary{padding:3px 0;font-size:11px}
+#sap-desk-design .sd-simple-login-content .sd-demo-area .sd-flex{margin-top:13px}
+#sap-desk-design #sd-workspace{margin:20px;min-height:calc(100svh - 40px)}
+#sap-desk-design #sd-workspace .sd-main{background-image:none}
+#sap-desk-design #sd-workspace .sd-focus-strip,#sap-desk-design #sd-workspace .sd-eyebrow,#sap-desk-design #sd-workspace .sd-subtitle{display:none}
+#sap-desk-design #sd-workspace .sd-heading h1{font-size:29px}
+#sap-desk-design #sd-workspace .sd-heading{margin-bottom:27px}
+#sap-desk-design #sd-workspace .sd-sidebar .sd-side-note{display:none}
+#sap-desk-design .sd-back-home{margin-bottom:18px;font-size:11px;color:#847968;display:flex;align-items:center;gap:7px;padding:7px 0}
+@media(min-width:1550px){#sap-desk-design .sd-paper-scene{right:18%;width:360px;height:450px}#sap-desk-design .sd-stage-copy{left:9%}#sap-desk-design .sd-paper-panel h3{font-size:32px}}
+@media(max-width:1000px){#sap-desk-design .sd-home-header{width:calc(100% - 42px)}#sap-desk-design .sd-home-hero{padding-top:136px}#sap-desk-design .sd-paper-scene{right:9%;width:280px;height:370px}#sap-desk-design .sd-paper-panel{inset:79px 23px 23px}#sap-desk-design .sd-paper-top{margin:0 23px}#sap-desk-design .sd-paper-panel h3{font-size:24px}#sap-desk-design .sd-stage-copy{left:5%;width:36%}#sap-desk-design .sd-stage-copy-panel h2{font-size:31px}#sap-desk-design .sd-paper-rule{margin:15px 0}#sap-desk-design .sd-paper-conversation{margin-top:14px}#sap-desk-design .sd-paper-conversation>div{margin-bottom:12px}#sap-desk-design .sd-paper-complete h3{font-size:34px}}
+@media(max-width:680px){html{scroll-padding-top:84px}#sap-desk-design .sd-home-header{width:calc(100% - 28px);top:12px;padding:7px 8px 7px 12px;gap:12px}#sap-desk-design .sd-home-brand{font-size:19px;gap:8px}#sap-desk-design .sd-home-brand-note,#sap-desk-design .sd-how-link{display:none}#sap-desk-design .sd-home-header nav{gap:0}#sap-desk-design .sd-home-entry{font-size:11px;gap:8px;padding-right:10px;min-height:40px}#sap-desk-design .sd-entry-icon{width:29px;height:29px}#sap-desk-design .sd-home-hero{padding:117px 23px 22px}#sap-desk-design .sd-home-hero h1{font-size:clamp(42px,10vw,65px);line-height:1.28;letter-spacing:-.08em;margin-bottom:28px}#sap-desk-design .sd-home-subline{font-size:10px;letter-spacing:0}#sap-desk-design .sd-journey{margin:0 13px;height:210vh;min-height:1370px}#sap-desk-design .sd-journey-stage{top:77px;min-height:560px;height:calc(100svh - 94px);max-height:680px}#sap-desk-design .sd-stage-copy{left:24px;top:28px;right:24px;width:auto;height:135px}#sap-desk-design .sd-stage-copy-panel>span{font-size:10px}#sap-desk-design .sd-stage-copy-panel h2{font-size:27px;line-height:1.35;margin:9px 0 8px}#sap-desk-design .sd-stage-copy-panel h2 br{display:none}#sap-desk-design .sd-stage-copy-panel p{font-size:11px}#sap-desk-design .sd-stage-arch{width:100%;right:-32%;top:5%;height:100%}#sap-desk-design .sd-paper-scene{right:auto;left:50%;top:calc(50% + 43px);width:225px;height:306px;transform:translate3d(-50%,-50%,0)}#sap-desk-design .sd-paper-top{height:48px;margin:0 20px;font-size:10px}#sap-desk-design .sd-paper-panel{inset:65px 20px 18px}#sap-desk-design .sd-paper-eyebrow{font-size:9px}#sap-desk-design .sd-paper-panel h3{font-size:21px;margin:12px 0}#sap-desk-design .sd-paper-panel p{font-size:11px;line-height:1.8}#sap-desk-design .sd-paper-rule{margin:13px 0 10px}#sap-desk-design .sd-paper-panel footer{font-size:9px;padding-top:10px}#sap-desk-design .sd-paper-status{font-size:9px}#sap-desk-design .sd-paper-conversation{margin-top:12px;padding-left:9px}#sap-desk-design .sd-paper-conversation b,#sap-desk-design .sd-paper-conversation p{font-size:10px}#sap-desk-design .sd-paper-conversation p{line-height:1.6}#sap-desk-design .sd-paper-conversation>div{margin-bottom:9px}#sap-desk-design .sd-complete-symbol{width:28px;height:28px;margin-bottom:12px}#sap-desk-design .sd-paper-complete h3{font-size:27px;margin:10px 0}#sap-desk-design .sd-paper-complete p{font-size:10px}#sap-desk-design .sd-coral-tab{width:50px;height:100px;right:-15px;top:50px}#sap-desk-design .sd-journey-bottom{left:23px;right:23px;bottom:20px;justify-content:center}#sap-desk-design .sd-scroll-label{display:none}#sap-desk-design .sd-journey-steps{gap:16px;width:100%;justify-content:space-between}#sap-desk-design .sd-journey-steps button{min-width:60px;font-size:10px;min-height:37px}#sap-desk-design .sd-home-end{padding:70px 22px}#sap-desk-design .sd-home-end h2{font-size:39px}#sap-desk-design .sd-home-footer{margin:0 21px;font-size:9px}#sap-desk-design .sd-simple-login-header{padding:22px}#sap-desk-design .sd-simple-login-header .sd-brand{font-size:20px}#sap-desk-design .sd-simple-login-content{margin:20px 20px 0;padding:30px 24px}#sap-desk-design #sd-workspace{margin:10px;min-height:calc(100svh - 20px)}#sap-desk-design #sd-workspace .sd-page{padding:23px 17px}#sap-desk-design #sd-workspace .sd-topbar{height:auto;min-height:50px;flex-wrap:wrap;padding:10px 17px;gap:5px}}
+@media(max-width:680px){#sap-desk-design .sd-stage-copy-panel[data-stage-copy="2"] h2 br{display:initial}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}#sap-desk-design .sd-journey{height:1000px;min-height:1000px}#sap-desk-design .sd-home-entry{transition:none}#sap-desk-design .sd-stage-grid,#sap-desk-design .sd-stage-arch{transform:none!important}#sap-desk-design .sd-paper,#sap-desk-design .sd-paper-back{transform:none!important}#sap-desk-design .sd-paper-back-far{translate:22px 12px}#sap-desk-design .sd-paper-back-near{translate:11px 6px}}

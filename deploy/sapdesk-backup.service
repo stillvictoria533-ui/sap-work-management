@@ -1,0 +1,14 @@
+[Unit]
+Description=Daily SAP Desk database and attachment backup
+After=docker.service
+Requires=docker.service
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+WorkingDirectory=/opt/sapdesk
+ExecStart=/usr/bin/python3 /opt/sapdesk/scripts/ops.py backup
+ExecStopPost=/usr/bin/python3 /opt/sapdesk/scripts/ops.py monitor
+EnvironmentFile=-/etc/sapdesk-ops.env
+TimeoutStartSec=30min
+TimeoutStopSec=3min

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.sapdesk.ai-ticket-dispatcher</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@PYTHON@</string>
+    <string>@PROJECT@/scripts/ai_ticket_dispatch.py</string>
+    <string>@MODE@</string>
+  </array>
+  <key>WorkingDirectory</key><string>@PROJECT@</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>@NODE_DIR@:/usr/local/bin:/usr/bin:/bin</string>
+    @PROXY_ENV@
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>60</integer>
+  <key>StandardOutPath</key><string>/dev/null</string>
+  <key>StandardErrorPath</key><string>/dev/null</string>
+</dict>
+</plist>

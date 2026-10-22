@@ -1,0 +1,11 @@
+[Unit]
+Description=Check SAP Desk health and alert administrators
+After=network-online.target docker.service
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+WorkingDirectory=/opt/sapdesk
+EnvironmentFile=-/etc/sapdesk-ops.env
+ExecStart=/usr/bin/python3 /opt/sapdesk/scripts/ops.py monitor
+TimeoutStartSec=55s

@@ -1,0 +1,42 @@
+name: checks
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sapdesk
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: sapdesk
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U sapdesk -d sapdesk" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DJANGO_DEBUG: 'true'
+      DJANGO_SECRET_KEY: ci-only-not-for-production-a-long-secret-key-1234567890
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_DB: sapdesk
+      POSTGRES_USER: sapdesk
+      POSTGRES_PASSWORD: ci-only-password
+      DINGTALK_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -r backend/requirements.txt
+      - run: python -m unittest discover -s tests -p 'test_deployment.py'
+      - name: Test AI ticket dispatcher
+        run: python -m unittest discover -s tests -p 'test_ai_ticket_dispatch.py'
+      - run: python backend/manage.py test desk
+      - run: python backend/manage.py makemigrations --check --dry-run
+      - run: npm --prefix frontend ci
+      - name: Test frontend
+        run: npm --prefix frontend test
+      - run: npm --prefix frontend run build

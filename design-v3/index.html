@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5eddd">
+  <meta name="description" content="SAP Desk 需求协作平台 · 交互设计预览">
+  <title>SAP Desk — 从需求到交付</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="workspace.css">
+  <link rel="stylesheet" href="home.css">
+  <script src="icons.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="motion.js" defer></script>
+</head>
+<body>
+
+<div id="sap-desk-design" lang="zh-CN" aria-label="SAP Desk 需求管理平台设计预览">
+  <div class="sd-preview"><span>DESIGN STUDY / 03 · 示例数据</span><label>预览页面 <select id="sd-role" aria-label="预览页面"><option value="home">首页</option><option value="login">登录界面</option><option value="admin">管理员工作台</option><option value="consultant">顾问工作台</option><option value="accounts">账号管理</option></select></label></div>
+  <section id="sd-home-screen" class="sd-home" aria-label="SAP Desk 首页">
+  <header class="sd-home-header">
+    <a class="sd-home-brand" href="#top" aria-label="SAP Desk 首页"><span class="sd-mark" aria-hidden="true"><b></b><b></b><b></b><b></b></span>SAP Desk<span class="sd-home-brand-note">需求协作</span></a>
+    <nav aria-label="首页导航"><a class="sd-how-link" href="#journey">协作流程</a><button class="sd-home-entry" type="button" data-nav="login"><span class="sd-entry-icon"><i data-lucide="arrow-up-right" aria-hidden="true"></i></span>进入工作台</button></nav>
+  </header>
+  <div class="sd-home-hero" id="top">
+    <h1><span>从一个需求，</span><span>到一次交付。</span></h1>
+    <div class="sd-home-subline"><span>SAP 需求协作空间</span><a href="#journey" aria-label="向下浏览协作流程">向下探索 <i data-lucide="arrow-down" aria-hidden="true"></i></a></div>
+  </div>
+  <section class="sd-journey" id="journey" aria-label="滚动浏览：提交需求、沟通反馈、完成交付">
+    <div class="sd-journey-stage">
+      <div class="sd-stage-grid" aria-hidden="true"></div>
+      <div class="sd-stage-arch" aria-hidden="true"><div></div></div>
+      <div class="sd-stage-shadow" aria-hidden="true"></div>
+      <div class="sd-stage-copy">
+        <div class="sd-stage-copy-panel" data-stage-copy="0"><span>01 / 提交</span><h2>先把需求，<br>说清楚。</h2><p>一个入口，留下背景与期望。</p></div>
+        <div class="sd-stage-copy-panel" data-stage-copy="1" aria-hidden="true" inert><span>02 / 沟通</span><h2>每次推进，<br>都有回应。</h2><p>反馈与补充，在同一条时间线上。</p></div>
+        <div class="sd-stage-copy-panel" data-stage-copy="2" aria-hidden="true" inert><span>03 / 完成</span><h2>让过程可追溯。<br>让结果有着落。</h2><p>从受理到归档，每一步清晰可见。</p></div>
+      </div>
+      <div class="sd-paper-scene" aria-label="工单从提交到完成的动态示意">
+        <div class="sd-paper-back sd-paper-back-far" aria-hidden="true"></div>
+        <div class="sd-paper-back sd-paper-back-near" aria-hidden="true"></div>
+        <div class="sd-coral-tab" aria-hidden="true"></div>
+        <article class="sd-paper">
+          <header class="sd-paper-top"><span>REQ / 1048</span><span class="sd-paper-module">MM</span></header>
+          <div class="sd-paper-panel" data-paper-panel="0"><div class="sd-paper-eyebrow">一项新的需求</div><h3>采购审批<br>策略调整</h3><div class="sd-paper-rule"></div><p>为不同采购金额，<br>建立清晰的审批路径。</p><footer><span>林晓 · SAP 顾问</span><span class="sd-paper-status">待受理</span></footer></div>
+          <div class="sd-paper-panel" data-paper-panel="1" aria-hidden="true" inert><div class="sd-paper-eyebrow">沟通时间线</div><h3>一起，<br>把细节确认好。</h3><div class="sd-paper-conversation"><div><b>管理员</b><p>审批策略已调整，请验证边界场景。</p></div><div><b>林晓</b><p>测试通过，结果符合预期。</p></div></div></div>
+          <div class="sd-paper-panel sd-paper-complete" data-paper-panel="2" aria-hidden="true" inert><div class="sd-complete-symbol"><i data-lucide="check" aria-hidden="true"></i></div><div class="sd-paper-eyebrow">REQUEST COMPLETED</div><h3>有始。<br>有终。</h3><p>已完成并归档，沟通记录完整保留。</p><footer><span>REQ / 1048</span><span class="sd-paper-status">已关闭</span></footer></div>
+        </article>
+      </div>
+      <div class="sd-journey-bottom"><span class="sd-scroll-label">随滚动，向前一步</span><div class="sd-journey-steps" aria-label="跳转协作阶段"><button type="button" data-journey-step="0" aria-pressed="true">01 <span>提交</span></button><button type="button" data-journey-step="1" aria-pressed="false">02 <span>沟通</span></button><button type="button" data-journey-step="2" aria-pressed="false">03 <span>完成</span></button></div></div>
+    </div>
+  </section>
+  <section class="sd-home-end"><span class="sd-end-eyebrow">YOUR NEXT REQUEST STARTS HERE.</span><h2>下一项协作，<br>从这里开始。</h2><button class="sd-home-entry" type="button" data-nav="login"><span class="sd-entry-icon"><i data-lucide="arrow-up-right" aria-hidden="true"></i></span>进入工作台</button></section>
+  <footer class="sd-home-footer"><span>SAP Desk · 需求协作空间</span><span>DESIGN PREVIEW / 03</span></footer>
+</section>
+
+<div id="sd-login-screen" class="sd-login" hidden></div>
+  <div class="sd-window" id="sd-workspace" hidden>
+    <aside class="sd-sidebar">
+      <div><div class="sd-brand"><span class="sd-mark" aria-hidden="true"><b></b><b></b><b></b><b></b></span>SAP Desk</div><div class="sd-brand-caption">需求协作空间</div></div>
+      <nav class="sd-nav" aria-label="工作台导航"><div class="sd-nav-label">WORKSPACE</div><button type="button" data-nav="list" aria-current="page"><i data-lucide="inbox" aria-hidden="true"></i><span id="sd-list-label">全部工单</span><span class="sd-count" id="sd-total">8</span></button><button type="button" data-nav="attention"><i data-lucide="message-circle" aria-hidden="true"></i><span>需要我处理</span><span class="sd-count" id="sd-attention">4</span></button><button type="button" data-nav="archive"><i data-lucide="archive" aria-hidden="true"></i><span>已归档</span></button><button type="button" data-nav="new" hidden><i data-lucide="plus" aria-hidden="true"></i><span>提交需求</span></button><div class="sd-nav-divider" id="sd-admin-divider"></div><button type="button" data-nav="accounts"><i data-lucide="users-round" aria-hidden="true"></i><span>账号管理</span></button></nav>
+      <div class="sd-sidebar-bottom"><button type="button" class="sd-back-home" data-nav="home"><i data-lucide="arrow-left" aria-hidden="true"></i>返回首页</button><div class="sd-side-note">每个需求，<br>都有清晰的下一步。</div><button type="button" class="sd-profile-button" data-nav="profile" aria-label="打开我的账号设置"><span class="sd-avatar" id="sd-user-avatar">管</span><span class="sd-person"><span id="sd-user-name">我的工作台</span><small id="sd-user-role">管理员</small></span></button></div>
+    </aside>
+    <main class="sd-main"><div class="sd-topbar"><span id="sd-location">工作空间 / 全部工单</span><div class="sd-top-actions"><span class="sd-date">2026.10.09</span><button type="button" data-nav="profile"><i data-lucide="circle-user-round" aria-hidden="true"></i>我的账号</button><button type="button" data-action="sign-out"><i data-lucide="log-out" aria-hidden="true"></i>退出</button></div></div><div id="sd-notice" class="sd-notice" role="status" hidden></div><div class="sd-page" id="sd-content"></div></main>
+  </div>
+</div>
+
+</body>
+</html>

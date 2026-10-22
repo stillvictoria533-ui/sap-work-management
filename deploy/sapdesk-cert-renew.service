@@ -1,0 +1,13 @@
+[Unit]
+Description=Renew and activate SAP Desk HTTPS certificate
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/sapdesk
+ExecStart=/usr/bin/python3 /opt/sapdesk/scripts/certificates.py renew
+User=root
+UMask=0077
+TimeoutStartSec=15min

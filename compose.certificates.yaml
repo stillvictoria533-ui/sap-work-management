@@ -1,0 +1,25 @@
+name: sapdesk-certificates
+services:
+  challenge:
+    image: nginx:1.28-alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+      NGINX_ENVSUBST_FILTER: APP_DOMAIN
+    ports:
+      - '80:80'
+    volumes:
+      - ./deploy/nginx-acme.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/acme:/var/www/acme:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'
+  certbot:
+    image: certbot/certbot:v5.8.0
+    profiles: ['tools']
+    volumes:
+      - ${SAPDESK_ACME_CONFIG:-./deploy/letsencrypt}:/etc/letsencrypt
+      - ./deploy/acme:/var/www/acme
+      - ./deploy/acme-work:/var/lib/letsencrypt
+      - ./deploy/acme-logs:/var/log/letsencrypt
