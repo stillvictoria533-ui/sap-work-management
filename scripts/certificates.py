@@ -144,14 +144,14 @@ class Certificates:
             raise CertError('证书文件尚未生成。')
         try:
             ipaddress.ip_address(self.host)
-            check = '-checkip'
+            check = '-verify_ip'
         except ValueError:
-            check = '-checkhost'
-        self.ssl_command('x509', '-in', chain, check, self.host, '-noout')
+            check = '-verify_hostname'
         self.ssl_command('x509', '-in', chain, '-checkend', '86400', '-noout')
         # Both arguments can contain the full chain; the first certificate is the leaf.
         # System trust is required: a staging/self-signed certificate must never activate.
-        self.ssl_command('verify', '-purpose', 'sslserver', '-untrusted', chain, chain)
+        # Older x509 -checkip/-checkhost can exit 0 on a mismatch; verify fails reliably.
+        self.ssl_command('verify', '-purpose', 'sslserver', check, self.host, '-untrusted', chain, chain)
         certificate_key = self.ssl_command('x509', '-in', chain, '-pubkey', '-noout')
         private_key = self.ssl_command('pkey', '-in', key, '-pubout')
         if certificate_key.strip() != private_key.strip():

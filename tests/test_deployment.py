@@ -90,7 +90,7 @@ class CertificateTests(unittest.TestCase):
         cls.generate = staticmethod(run)
         run('req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256', '-nodes', '-keyout', 'ca.key', '-out', 'ca.pem', '-days', '10', '-subj', '/CN=SAPDeskTestCA', '-addext', 'basicConstraints=critical,CA:TRUE')
         run('req', '-new', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256', '-nodes', '-keyout', 'leaf.key', '-out', 'leaf.csr', '-subj', '/CN=SAPDeskTest')
-        (cls.cert_dir / 'extensions').write_text('subjectAltName=IP:43.130.36.105\nbasicConstraints=critical,CA:FALSE\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth\n')
+        (cls.cert_dir / 'extensions').write_text('subjectAltName=IP:43.130.36.105,DNS:desk.example.com\nbasicConstraints=critical,CA:FALSE\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth\n')
         run('x509', '-req', '-in', 'leaf.csr', '-CA', 'ca.pem', '-CAkey', 'ca.key', '-CAcreateserial', '-days', '6', '-extfile', 'extensions', '-out', 'leaf.pem')
         (cls.cert_dir / 'fullchain.pem').write_bytes((cls.cert_dir / 'leaf.pem').read_bytes() + (cls.cert_dir / 'ca.pem').read_bytes())
         (cls.cert_dir / 'empty-ca-dir').mkdir()
@@ -121,6 +121,31 @@ class CertificateTests(unittest.TestCase):
         self.manager.host = '8.8.8.8'
         with self.assertRaises(CertError):
             self.manager.validate(self.source)
+
+    def test_matching_hostname_is_accepted(self):
+        self.manager.host = 'desk.example.com'
+        self.assertTrue(self.manager.validate(self.source))
+
+    def test_wrong_hostname_is_rejected(self):
+        self.manager.host = 'other.example.com'
+        with self.assertRaises(CertError):
+            self.manager.validate(self.source)
+
+    def test_identity_mismatch_is_rejected_with_legacy_x509_exit_behavior(self):
+        real_command = self.manager.ssl_command
+
+        def legacy_command(*arguments):
+            # Older OpenSSL x509 reports a mismatch on stdout but exits successfully.
+            if arguments[0] == 'x509' and any(flag in arguments for flag in ['-checkip', '-checkhost']):
+                return b'Identity does NOT match certificate\n'
+            return real_command(*arguments)
+
+        with patch.object(self.manager, 'ssl_command', side_effect=legacy_command):
+            for host in ['8.8.8.8', 'other.example.com']:
+                with self.subTest(host=host):
+                    self.manager.host = host
+                    with self.assertRaises(CertError):
+                        self.manager.validate(self.source)
 
     def test_wrong_key_is_rejected(self):
         shutil.copyfile(self.cert_dir / 'ca.key', self.source / 'privkey.pem')
