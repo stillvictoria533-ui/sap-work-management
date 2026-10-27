@@ -1,0 +1,76 @@
+{
+  "status": "published_and_code_synchronized",
+  "timezone": "Asia/Shanghai",
+  "approved_code_commit": "75c92645203d87e5087c56fe5bc3aaa1ef6b9f30",
+  "server_verified_at_beijing": "2026-10-27T16:39:50+08:00",
+  "runtime_activated_at_beijing": "2026-10-27T16:41:11+08:00",
+  "github": {
+    "repository": "stillvictoria533-ui/sap-work-management",
+    "branch": "main",
+    "application_commit": "75c92645203d87e5087c56fe5bc3aaa1ef6b9f30",
+    "remote_commit_verified": true,
+    "workflow_run_id": 40475399234,
+    "workflow_status": "completed",
+    "workflow_conclusion": "success",
+    "workflow_url": "https://github.com/stillvictoria533-ui/sap-work-management/actions/runs/40475399234"
+  },
+  "server": {
+    "migration": "desk.0016_alter_event_kind",
+    "https_health": "ok",
+    "services": "healthy",
+    "backup_counts_available": true,
+    "source_files_updated": 12,
+    "candidate_image_backend_files_verified": {
+      "api": 84,
+      "chat_worker": 84
+    },
+    "candidate_web_files_verified": 30,
+    "synthetic_smoke": {
+      "operator_gateway_rejected": true,
+      "manual_required": true,
+      "detail_visible": true,
+      "operator_scope_bound": true,
+      "wrong_type_rejected": true,
+      "old_run_unchanged": true,
+      "duplicate_request_idempotent": true,
+      "query_receipt_required": true,
+      "reply_idempotent": true,
+      "notification_once": true,
+      "synthetic_records_rolled_back": true
+    },
+    "backup_verified": true,
+    "rollback_backup_retained": true
+  },
+  "runtime": {
+    "verified_files": 12,
+    "shadow": "SHADOW_EMPTY",
+    "loaded": true,
+    "scan_interval_seconds": 60,
+    "legacy_heartbeat": "PAUSED"
+  },
+  "predeployment_tests": {
+    "local_postgresql": {
+      "version": "17.6",
+      "tests": 229,
+      "skipped": 0
+    },
+    "python_scripts": {
+      "tests": 81,
+      "skipped": 0
+    },
+    "frontend": {
+      "tests": 41,
+      "passed": 41
+    },
+    "connector_and_readiness": {
+      "tests": 7,
+      "passed": 7
+    },
+    "production_build": true
+  },
+  "limits": [
+    "The operator attestation is an integrity check, not a cryptographic proof of SAP identity.",
+    "The new metadata completion path is restricted to exact unique DS4/QS4 objects; PS4 search remains forbidden.",
+    "Detailed production ticket and SAP source data remain in the private platform and are not included here."
+  ]
+}

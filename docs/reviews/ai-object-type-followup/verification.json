@@ -1,5 +1,5 @@
 {
-  "status": "review_only_not_deployed",
+  "status": "predeployment_snapshot",
   "base_commit": "d0a8c456936b2e29af521fd2470ab63d9abde5b5",
   "branch": "codex/ai-object-kind-diagnostics",
   "postgresql_local": {
@@ -53,5 +53,6 @@
     "Historical generic authorization failure cannot be attributed to a specific planner action.",
     "Only DS4/QS4 exact unique catalogue attestation is supported for a missing source type.",
     "User confirmation of this final release is required before deployment."
-  ]
+  ],
+  "scope": "Snapshot taken before approved deployment; see deployment-verification.json for release evidence."
 }

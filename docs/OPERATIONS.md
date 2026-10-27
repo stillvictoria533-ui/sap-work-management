@@ -71,3 +71,5 @@ python3 /opt/sapdesk/scripts/restore_drill.py drill '/opt/sapdesk/backups/daily/
 最新发布记录：[2026-10-27 复核跟进修复上线与 GitHub 同步](reviews/audit-followup-fixes/README.md)，上线代码 `ad0388d`，服务器隔离 PostgreSQL 186 项回归与生产冒烟通过。
 
 运行保障发布记录：[2026-10-27 AI 监控、附件容量和本机恢复改进](reviews/operations-resilience/README.md)，上线代码 `62eb1fc`。
+
+AI 对象类型与受阻原因发布记录：[2026-10-27 受控继续跟进](reviews/ai-object-type-followup/README.md)，上线代码 `75c9264`。
