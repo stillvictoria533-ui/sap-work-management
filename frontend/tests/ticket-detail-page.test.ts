@@ -335,3 +335,24 @@ test("explicitly clearing a changed acceptance date remains possible after confi
   await s.changeStatus();
   assert.equal(requests[0].estimated_completion_date, null);
 });
+
+test("manual AI failure is visible and clears when the round is no longer blocked", async (t) => {
+  const page = await setup(t, undefined, async () => ({
+    ...ticket(1),
+    ai_followup: {
+      enabled: true,
+      state: "manual_required",
+      message: "AI 分析已达到 45 分钟上限；最近受阻：身份或范围校验受阻。",
+    },
+  }));
+  const s = page.state();
+  assert.match(s.aiFollowupMessage, /最近受阻/);
+  s.body = "keep this draft";
+  s.ticket = {
+    ...s.ticket,
+    ai_followup: { enabled: true, state: "running", message: "AI 正在分析" },
+  };
+  await flush();
+  assert.equal(s.aiFollowupMessage, "");
+  assert.equal(s.body, "keep this draft");
+});

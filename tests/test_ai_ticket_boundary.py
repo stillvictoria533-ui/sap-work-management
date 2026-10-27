@@ -210,7 +210,7 @@ class TransportBoundaryTests(unittest.TestCase):
         result = self.node('''
 const assert=require('node:assert/strict');
 const {buildCommand}=require('./scripts/ai_ticket_transport.cjs');
-for (const operation of ['get','retry','execute_command','constructor','__proto__'])
+for (const operation of ['get','retry','continue','execute_command','constructor','__proto__'])
   assert.throws(()=>buildCommand({operation}));
 assert.throws(()=>buildCommand({operation:['list']}));
 assert.throws(()=>buildCommand({operation:'list',Command:'injected'}));
@@ -219,6 +219,9 @@ const command=buildCommand({operation:'reply',run_id:'r',lease_token:'t',payload
 assert(!command.includes('touch')); assert(!command.includes('canary'));
 const encoded=command.match(/printf "%s" "([A-Za-z0-9+/=]+)"/)[1];
 assert.equal(JSON.parse(Buffer.from(encoded,'base64')).payload.body,body);
+const deferred=buildCommand({operation:'defer',run_id:'r',lease_token:'t',reason:'authorization_missing',detail_code:'source_type_missing'});
+const details=deferred.match(/printf "%s" "([A-Za-z0-9+/=]+)"/)[1];
+assert.equal(JSON.parse(Buffer.from(details,'base64')).detail_code,'source_type_missing');
 console.log('fixed-template-ok');
 ''')
         self.assertIn('fixed-template-ok', result)

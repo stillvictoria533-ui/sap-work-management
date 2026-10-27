@@ -10,14 +10,22 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import ValidationError
 
 from .models import Audit, Event, Ticket, TicketAIRun, TicketAIQuery, User
 from .services import notify_for_event
-from .ai_policy import freeze_scope, upgrade_data_scope, complete_data_objects, required_data_keys, DATA_TABLES, MAX_QUERIES
+from .ai_policy import (freeze_scope, upgrade_data_scope, recover_original_source_kinds, complete_data_objects, required_data_keys,
+    validate_catalog_attestation, exact_keys, digest, PolicyError, DATA_TABLES, MAX_QUERIES)
 
 SYSTEM_CLIENTS = {'DS4': '110', 'QS4': '120', 'PS4': '100'}
 BLOCK_REASONS = {'sap_unavailable', 'authorization_missing', 'context_incomplete', 'evidence_incomplete', 'runtime_error', 'time_limit'}
+FAILURE_DETAIL_REASONS = {
+    'source_type_missing': 'authorization_missing', 'source_type_not_authorized': 'authorization_missing',
+    'plan_outside_scope': 'authorization_missing', 'plan_invalid': 'authorization_missing',
+    'cli_version_mismatch': 'authorization_missing', 'unexpected_model_event': 'authorization_missing',
+    'executor_error': 'runtime_error',
+}
 LEASE_DURATION = timedelta(minutes=15)
 TOTAL_DURATION = timedelta(minutes=45)
 RETRY_DELAYS = (timedelta(minutes=5), timedelta(minutes=10))
@@ -40,9 +48,11 @@ def accepted_scope(ticket, accepted):
         accepted_scope={}).order_by('-created_at', '-id').first()
     scope = copy.deepcopy(previous.accepted_scope) if previous else freeze_scope(
         ticket.system, ticket.title, ticket.description, accepted.body, accepted.pk)
-    original = freeze_scope(ticket.system, ticket.title, ticket.description, accepted.body, accepted.pk) if (
-        scope.get('schema') == 'ticket-read-scope/v1') else None
+    original = freeze_scope(ticket.system, ticket.title, ticket.description, accepted.body, accepted.pk)
     upgrade_data_scope(scope, original)
+    if original['restriction_unresolved']:
+        scope['restriction_unresolved'] = True
+    recover_original_source_kinds(scope, original)
     # Only missing keys on an identified accepted object may be completed.
     # A follow-up cannot replace a bound key, add an object or pair legacy lists.
     if any(required_data_keys(obj, scope) - set(record)
@@ -77,6 +87,15 @@ def trigger_for(ticket):
     answer = ticket.events.filter(kind='reply').filter(Q(is_ai=True) | Q(actor_role__in=['admin', 'ai'])).order_by('-id').first()
     followup = ticket.events.filter(kind='reply', actor_role='consultant', is_ai=False,
         actor_id=ticket.owner_id).order_by('-id').first()
+    # A blocked round may be continued only by an explicit operator request.
+    # A later human reply or owner follow-up always takes precedence.
+    continuation = ticket.events.filter(kind='ai_retry', actor_role='system',
+        actor_id=accepted.actor_id, pk__gt=accepted.pk).order_by('-id').first()
+    if continuation and continuation.pk > max(answer.pk if answer else 0, followup.pk if followup else 0):
+        retry = TicketAIRun.objects.filter(ticket=ticket, trigger=continuation,
+            accepted_event=accepted, context_version=ticket.version).first()
+        if retry and retry_requested(retry):
+            return continuation, accepted, ''
     if answer and (not followup or followup.pk <= answer.pk):
         # Only the trusted operator command can request another turn on an AI answer.
         # A normal AI reply or consultant-authored instruction cannot do this.
@@ -115,6 +134,89 @@ def request_retry(ticket_id, version):
             'trigger_event_id': answer.pk}
 
 
+
+def request_blocked_followup(ticket_id, version, request_key, proof):
+    """Explicit trusted operator action for a single exhausted, accepted round.
+
+    The caller attests it just used the company SAP catalogue with verified
+    identity; a plain hash is an integrity check, not an authenticity signature.
+    This operation is never exposed to the model or the automated gateway.
+    """
+    if type(ticket_id) is not int or ticket_id < 1 or type(version) is not int or version < 1:
+        raise PolicyError('invalid_request')
+    try:
+        request_key = uuid.UUID(str(request_key))
+    except (TypeError, ValueError, AttributeError):
+        raise PolicyError('invalid_request') from None
+    exact_keys(proof, {'object', 'kind', 'observed_at', 'evidence'})
+    fingerprint = digest({'ticket_id': ticket_id, 'version': version, 'proof': proof})
+    with transaction.atomic():
+        ticket = Ticket.objects.select_for_update().select_related('owner').get(pk=ticket_id)
+        existing = Audit.objects.filter(action='ai_ticket_retry_requested', target=str(ticket.pk),
+            detail__request_key=str(request_key)).order_by('-id').first()
+        if existing:
+            if existing.detail.get('fingerprint') != fingerprint:
+                raise PolicyError('request_key_reused')
+            retry = TicketAIRun.objects.filter(pk=existing.detail.get('run_id'), ticket=ticket).first()
+            if not retry or not retry_requested(retry):
+                raise PolicyError('retry_record_invalid')
+            return {'outcome': 'already_requested', 'run_id': str(retry.pk)}
+        if ticket.version != version:
+            return {'outcome': 'skipped', 'reason': 'version_changed'}
+        trigger, accepted, reason = trigger_for(ticket)
+        if reason:
+            return {'outcome': 'skipped', 'reason': reason}
+        prior, blocker = run_blocker(ticket, trigger)
+        if blocker != 'manual_required' or not prior or prior.status != 'blocked' or prior.accepted_event_id != accepted.pk:
+            return {'outcome': 'skipped', 'reason': 'not_manual_required'}
+        if prior.context_version != ticket.version:
+            return {'outcome': 'skipped', 'reason': 'version_changed'}
+        # This recovery path cannot reset a previously consumed SAP query budget.
+        if prior.queries.exists():
+            return {'outcome': 'skipped', 'reason': 'prior_query_history'}
+        observed = parse_datetime(proof['observed_at']) if isinstance(proof['observed_at'], str) else None
+        now = timezone.now()
+        if not observed or timezone.is_naive(observed) or observed > now + timedelta(seconds=30) or observed < now - timedelta(minutes=5):
+            raise PolicyError('catalog_attestation_stale')
+        scope = copy.deepcopy(prior.accepted_scope)
+        original = freeze_scope(ticket.system, ticket.title, ticket.description, accepted.body, accepted.pk)
+        if (scope.get('accepted_event_id') != accepted.pk or scope.get('system') != ticket.system
+                or scope.get('client') != SYSTEM_CLIENTS.get(ticket.system)
+                or scope.get('source_hash') != original['source_hash']
+                or scope.get('restriction_unresolved') or original['restriction_unresolved']
+                or proof['object'] not in original['objects']):
+            raise PolicyError('accepted_material_mismatch')
+        if scope.get('schema') == 'ticket-read-scope/v1':
+            upgrade_data_scope(scope, original)
+        if scope.get('schema') != 'ticket-read-scope/v2':
+            raise PolicyError('scope_unresolved')
+        known = original['source_kinds'].get(proof['object'], [])
+        if known and proof['kind'] not in known:
+            raise PolicyError('source_kind_outside_scope')
+        proof_hash = validate_catalog_attestation(scope, proof['object'], proof['kind'], proof['evidence'])
+        scope['source_kinds'][proof['object']] = [proof['kind']]
+        scope.setdefault('source_kind_attestations', {})[proof['object']] = {
+            'kind': proof['kind'], 'system': scope['system'], 'client': scope['client'],
+            'observed_at': observed.isoformat(), 'sha256': proof_hash,
+            'source': 'trusted_operator_catalog_attestation',
+        }
+        ticket.version += 1
+        ticket.updated_at = now
+        ticket.save(update_fields=['version', 'updated_at'])
+        item = Event.objects.create(ticket=ticket, actor=accepted.actor, actor_name='系统', actor_role='system',
+            kind='ai_retry', body='已按已受理范围请求 AI 继续分析', version=ticket.version)
+        retry = TicketAIRun.objects.create(ticket=ticket, trigger=item, accepted_event=accepted,
+            context_version=ticket.version, status='queued', accepted_scope=scope, lease_expires_at=now)
+        Audit.objects.create(actor=accepted.actor, action='ai_ticket_retry_requested', target=str(ticket.pk), detail={
+            'run_id': str(retry.pk), 'trigger_event': item.pk, 'accepted_event': accepted.pk,
+            'version': ticket.version, 'source': 'explicit_blocked_operator_request',
+            'prior_run_id': str(prior.pk), 'request_key': str(request_key), 'fingerprint': fingerprint,
+            'object': proof['object'], 'kind': proof['kind'], 'catalog_sha256': proof_hash,
+            'catalog_observed_at': observed.isoformat(),
+        })
+        return {'outcome': 'queued', 'run_id': str(retry.pk), 'version': ticket.version, 'trigger_event_id': item.pk}
+
+
 def run_blocker(ticket, trigger):
     run = TicketAIRun.objects.filter(ticket=ticket, trigger=trigger).first()
     if not run:
@@ -132,6 +234,11 @@ def run_blocker(ticket, trigger):
     if run.context_version == ticket.version and run.status == 'blocked':
         if run.attempts >= 3:
             return run, 'manual_required'
+        if run.retry_after is None:
+            detail = Audit.objects.filter(action='ai_ticket_blocked', target=str(ticket.pk),
+                detail__run_id=str(run.pk)).order_by('-id').values_list('detail__detail_code', flat=True).first()
+            if detail == 'source_type_missing':
+                return run, 'manual_required'
         if run.retry_after and run.retry_after > timezone.now():
             return run, 'retry_wait'
     return run, ''
@@ -359,8 +466,9 @@ def publish(run_id, lease_token, payload):
         return {'outcome':'replied','ticket_id':ticket.pk,'event_id':item.pk,'version':ticket.version}
 
 
-def defer(run_id,lease_token,reason):
-    if reason not in BLOCK_REASONS: raise ValidationError('无效的受阻原因。')
+def defer(run_id,lease_token,reason,detail_code=''):
+    if reason not in BLOCK_REASONS or not isinstance(detail_code, str) or (detail_code and FAILURE_DETAIL_REASONS.get(detail_code) != reason):
+        raise ValidationError('无效的受阻原因。')
     with transaction.atomic():
         run=TicketAIRun.objects.select_for_update().get(pk=run_id)
         now = timezone.now()
@@ -368,7 +476,7 @@ def defer(run_id,lease_token,reason):
             return {'outcome':'skipped','reason':'run_changed'}
         run.status='blocked';run.reason=reason;run.updated_at=now
         run.retry_after = None
-        manual_required = reason == 'time_limit' or run.attempts >= 3
+        manual_required = reason == 'time_limit' or run.attempts >= 3 or detail_code == 'source_type_missing'
         if not manual_required:
             delay = RETRY_DELAYS[0 if run.attempts == 1 else 1]
             if run.deadline_at:
@@ -379,9 +487,36 @@ def defer(run_id,lease_token,reason):
             else:
                 run.retry_after = now + delay
         run.save()
-        Audit.objects.create(actor=run.accepted_event.actor, action='ai_ticket_blocked', target=str(run.ticket_id),
-            detail={'run_id': str(run.pk), 'reason': run.reason, 'manual_required': manual_required})
+        detail = {'run_id': str(run.pk), 'reason': reason, 'manual_required': manual_required}
+        if run.reason != reason:
+            detail['terminal_reason'] = run.reason
+        if detail_code:
+            detail['detail_code'] = detail_code
+        Audit.objects.create(actor=run.accepted_event.actor, action='ai_ticket_blocked', target=str(run.ticket_id), detail=detail)
         return {'outcome':'blocked','reason':run.reason,'manual_required':manual_required}
+
+
+FAILURE_LABELS = {
+    'authorization_missing': '身份或范围校验受阻', 'sap_unavailable': 'SAP 暂不可用',
+    'context_incomplete': '上下文信息不足', 'evidence_incomplete': '查询证据不完整',
+    'runtime_error': '执行程序异常', 'time_limit': '本轮处理时间已用尽',
+}
+FAILURE_DETAIL_LABELS = {
+    'source_type_missing': '需要确认对象源码类型',
+    'source_type_not_authorized': '源码类型不在受理范围',
+    'plan_outside_scope': '查询计划超出受理范围', 'plan_invalid': '查询计划未通过安全校验',
+    'cli_version_mismatch': 'AI 程序版本不匹配', 'unexpected_model_event': '检测到不允许的模型执行事件',
+    'executor_error': '执行程序异常',
+}
+
+
+def last_failure_label(run):
+    # Expiry can replace run.reason; preserve the earlier, bounded audit category.
+    detail = Audit.objects.filter(action='ai_ticket_blocked', target=str(run.ticket_id),
+        detail__run_id=str(run.pk)).order_by('-id').values_list('detail', flat=True).first()
+    if not isinstance(detail, dict):
+        return FAILURE_LABELS.get(run.reason, '')
+    return FAILURE_DETAIL_LABELS.get(detail.get('detail_code'), '') or FAILURE_LABELS.get(detail.get('reason'), '')
 
 
 def ticket_ai_state(ticket):
@@ -399,4 +534,8 @@ def ticket_ai_state(ticket):
         message = ('AI 本轮剩余时间不足以再次重试，需管理员处理'
             if run.deadline_at and run.deadline_at > timezone.now()
             else 'AI 分析已达到 45 分钟上限，需管理员处理')
+    if reason in {'manual_required', 'retry_wait'} and run:
+        failure = last_failure_label(run)
+        if failure and failure != '本轮处理时间已用尽':
+            message = message.rstrip('。') + '；最近受阻：' + failure + '。'
     return {'enabled':enabled(),'state':reason or 'queued','message':message}

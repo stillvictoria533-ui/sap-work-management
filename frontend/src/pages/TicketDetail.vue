@@ -330,6 +330,13 @@ async function changeStatus() {
     if (currentMutation(id, operation)) busy.value = false;
   }
 }
+const aiFollowupMessage = computed(() => {
+  const status = ticket.value?.ai_followup;
+  return status?.enabled &&
+    ["manual_required", "retry_wait"].includes(status.state)
+    ? status.message
+    : "";
+});
 const calendarReturn = computed(() =>
   route.query.from === "calendar"
     ? {
@@ -455,6 +462,9 @@ async function getFile(f: Attachment) {
       <span class="sd-module">{{ ticket.module }}</span
       >{{ ticket.kind }} · {{ ticket.owner_name }} 提交
     </div>
+    <p v-if="aiFollowupMessage" class="sd-next" role="status">
+      <strong>AI 跟进</strong> · {{ aiFollowupMessage }}
+    </p>
     <section class="sd-workflow" aria-label="工单流程">
       <p class="sd-small sd-muted">待受理 → 处理中 → 待验收 → 已完成</p>
       <p class="sd-workflow-next">{{ nextStep }}</p>
@@ -617,7 +627,9 @@ async function getFile(f: Attachment) {
                     ? "调整了开发排期"
                     : e.kind === "expedite"
                       ? "更新了加急申请"
-                      : "提交了需求工单"
+                      : e.kind === "ai_retry"
+                        ? "请求 AI 继续分析"
+                        : "提交了需求工单"
               }}
               <p
                 v-if="

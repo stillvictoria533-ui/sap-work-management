@@ -42,8 +42,9 @@ PLAN_SCHEMA = {
 
 
 class WorkerError(Exception):
-    def __init__(self, code='runtime_error'):
+    def __init__(self, code='runtime_error', detail_code=''):
         self.code = code
+        self.detail_code = detail_code
         super().__init__(code)
 
 
@@ -120,7 +121,7 @@ class CodexPlanner:
             if not self.checked:
                 version = run_bounded([self.binary, '--version'], timeout=5,
                     environment=model_environment(), cwd=directory)
-                if version.strip() != PINNED_VERSION: raise WorkerError('authorization_missing')
+                if version.strip() != PINNED_VERSION: raise WorkerError('authorization_missing', 'cli_version_mismatch')
                 self.checked = True
             schema = Path(directory) / 'response.schema.json'
             schema.write_text(json.dumps(PLAN_SCHEMA))
@@ -167,7 +168,7 @@ class CodexPlanner:
                             # Capabilities are disabled before generation. This check
                             # additionally rejects any unexpected execution event.
                             if item and item.get('type') not in {'agent_message', 'reasoning'}:
-                                raise WorkerError('authorization_missing')
+                                raise WorkerError('authorization_missing', 'unexpected_model_event')
                             if event.get('type') == 'item.completed' and item.get('type') == 'agent_message':
                                 answer = item.get('text')
                             if event.get('type') == 'turn.completed': completed = True

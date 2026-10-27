@@ -57,7 +57,7 @@ class Event(models.Model):
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     actor_name = models.CharField(max_length=60)
     actor_role = models.CharField(max_length=12)
-    kind = models.CharField(max_length=20, choices=[('created', '创建'), ('reply', '回复'), ('status', '状态变更'), ('schedule', '开发排期'), ('expedite', '加急申请')])
+    kind = models.CharField(max_length=20, choices=[('created', '创建'), ('reply', '回复'), ('status', '状态变更'), ('schedule', '开发排期'), ('expedite', '加急申请'), ('ai_retry', '重新跟进')])
     body = models.TextField(max_length=10000, blank=True)
     is_ai = models.BooleanField(default=False)
     previous_estimated_completion_date = models.DateField(null=True, blank=True)

@@ -1,0 +1,57 @@
+{
+  "status": "review_only_not_deployed",
+  "base_commit": "d0a8c456936b2e29af521fd2470ab63d9abde5b5",
+  "branch": "codex/ai-object-kind-diagnostics",
+  "postgresql_local": {
+    "version": "17.6",
+    "tests": 229,
+    "skipped": 0,
+    "isolated_unix_socket": true,
+    "server_stopped": true
+  },
+  "frontend": {
+    "tests": 41,
+    "passed": 41,
+    "production_build": true,
+    "synthetic_browser_mobile_width": 390,
+    "document_width": 390
+  },
+  "python_scripts": {
+    "tests": 81,
+    "skipped": 0,
+    "includes_real_cli_loopback_tests": 2
+  },
+  "connector_and_readiness": {
+    "tests": 7,
+    "passed": 7
+  },
+  "migration_check": "no_changes_detected",
+  "real_sap_metadata": {
+    "system": "DS4",
+    "client": "110",
+    "scope": "single accepted object",
+    "kind": "fm",
+    "company_evidence_validator_passed": true,
+    "source_read": false,
+    "interface_executed": false
+  },
+  "security": {
+    "operator_entry_exposed_to_automated_gateway": false,
+    "ps4_catalog_search_enabled": false,
+    "old_run_reset": false,
+    "original_query_budget_reset": false,
+    "stale_or_ambiguous_evidence_rejected": true,
+    "source_hash_is_not_a_signature": true,
+    "missing_type_stops_automatic_retry": true
+  },
+  "production": {
+    "deployed": false,
+    "target_ticket_changed": false,
+    "actual_followup_executed": false
+  },
+  "limitations": [
+    "Historical generic authorization failure cannot be attributed to a specific planner action.",
+    "Only DS4/QS4 exact unique catalogue attestation is supported for a missing source type.",
+    "User confirmation of this final release is required before deployment."
+  ]
+}

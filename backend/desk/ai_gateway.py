@@ -81,7 +81,7 @@ def complete(run_id, token, query_id, result, error):
 
 def dispatch(request):
     exact_keys(request, {'operation'}, {'after_id', 'limit', 'ticket_id', 'version', 'run_id', 'lease_token',
-        'payload', 'reason', 'request_key', 'plan', 'query_id', 'result', 'error'})
+        'payload', 'reason', 'detail_code', 'request_key', 'plan', 'query_id', 'result', 'error'})
     operation = request['operation']
     if not isinstance(operation, str) or operation not in OPERATIONS: raise PolicyError('operation_not_allowed')
     fields = {
@@ -89,7 +89,7 @@ def dispatch(request):
         'claim': ({'operation', 'ticket_id', 'version'}, set()),
         'renew': ({'operation', 'run_id', 'lease_token'}, set()),
         'reply': ({'operation', 'run_id', 'lease_token', 'payload'}, set()),
-        'defer': ({'operation', 'run_id', 'lease_token', 'reason'}, set()),
+        'defer': ({'operation', 'run_id', 'lease_token', 'reason'}, {'detail_code'}),
         'query_reserve': ({'operation', 'run_id', 'lease_token', 'request_key', 'plan'}, set()),
         'query_complete': ({'operation', 'run_id', 'lease_token', 'query_id', 'result', 'error'}, set()),
     }
@@ -112,7 +112,7 @@ def dispatch(request):
             touch_worker_heartbeat()
         return result
     if operation == 'reply': return ai.publish(run_id, token, request['payload'])
-    if operation == 'defer': return ai.defer(run_id, token, request['reason'])
+    if operation == 'defer': return ai.defer(run_id, token, request['reason'], request.get('detail_code', ''))
     if operation == 'query_reserve':
         return reserve(run_id, token, uuid.UUID(request['request_key']), request['plan'])
     return complete(run_id, token, uuid.UUID(request['query_id']), request['result'], request['error'])

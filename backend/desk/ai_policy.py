@@ -155,6 +155,27 @@ def upgrade_data_scope(scope, original=None):
         scope['schema'] = 'ticket-read-scope/v2'
 
 
+
+def recover_original_source_kinds(scope, original):
+    """Recover only an unbound type explicitly present in unchanged accepted material."""
+    if (not isinstance(original, dict) or scope.get('restriction_unresolved') or original.get('restriction_unresolved')
+            or scope.get('source_hash') != original.get('source_hash')
+            or scope.get('accepted_event_id') != original.get('accepted_event_id')
+            or scope.get('system') != original.get('system') or scope.get('client') != original.get('client')):
+        return
+    kinds = scope.get('source_kinds')
+    if not isinstance(kinds, dict) or not isinstance(scope.get('objects'), list):
+        return
+    for obj, values in original.get('source_kinds', {}).items():
+        if obj not in scope['objects'] or obj not in original.get('objects', []) or obj in DATA_TABLES:
+            continue
+        if kinds.get(obj) not in (None, []) or not isinstance(values, list) or len(values) != 1 or values[0] not in {'fm','prog','class'}:
+            continue
+        kinds[obj] = list(values)
+        scope.setdefault('source_kind_recoveries', {})[obj] = {
+            'source': 'original_accepted_material', 'accepted_event_id': scope['accepted_event_id']}
+
+
 def complete_data_objects(scope, text, event_id):
     """Fill a missing key once on one identified accepted object, never remap it."""
     for obj in scope.get('objects', []):
@@ -198,10 +219,26 @@ def source_kinds(text, objects):
         kinds = set()
         if obj.startswith(('ZCL_', 'YCL_', 'CL_', 'ZIF_', 'YIF_', 'IF_')): kinds.add('class')
         for kind, label in labels.items():
-            if re.search(r'(?:' + label + r')[\s:：]*["`“「]?' + re.escape(obj) + r'(?![A-Za-z0-9_/$])', text, re.I):
+            before = r'(?:' + label + r')[ \t:：]*["`“「]?' + re.escape(obj) + r'(?![A-Za-z0-9_/$])'
+            # Do not associate an object's suffix with another identifier or a
+            # label on the next line. A real delimiter is required after it.
+            after = (r'(?<![A-Za-z0-9_/$])' + re.escape(obj) + r'(?![A-Za-z0-9_/$])[ \t:：]*[（(]?[ \t]*'
+                     + r'(?:' + label + r')[ \t]*[）)]?(?=$|[\s,，.。;；:：!！?？])'
+                     + r'(?![ \t:：]*["`“「]?[A-Z][A-Z0-9_/$]{2,69}(?![A-Za-z0-9_/$]))')
+            if re.search(before, text, re.I) or re.search(after, text, re.I):
                 kinds.add(kind)
         if kinds: result[obj] = sorted(kinds)
     return result
+
+
+
+def has_source_read_restriction(text):
+    """Do not infer source permission from a type label in explicitly restricted text."""
+    negation = r'(?:禁止|严禁|不得|不允许|不要|不应|不可|无需|不必|勿|do\s+not|must\s+not|never|prohibit)'
+    action = r'(?:读取|查看|查询|分析|检查|访问|下载|获取|阅读|read|view|inspect|access|fetch|query)'
+    source = r'(?:源代码|源码|代码|函数|程序|类|source(?:\s+code)?|code|function|program|class)'
+    return bool(re.search(negation + r'[^\n。；;]{0,12}' + action + r'[^\n。；;]{0,32}' + source, text, re.I)
+                or re.search(source + r'[^\n。；;]{0,12}' + negation + r'[^\n。；;]{0,12}' + action, text, re.I))
 
 
 def freeze_scope(system, title, description, acceptance_note, accepted_event_id):
@@ -218,7 +255,7 @@ def freeze_scope(system, title, description, acceptance_note, accepted_event_id)
     note = re.sub(r'^开始处理[：:]\s*', '', note)
     note = re.sub(r'禁止(?:写入|修改|传输)', '', note).strip(' \n\t。.!！；;')
     unresolved = bool(note and not re.fullmatch(
-        r'开始处理|(?:(?:DS4|QS4|PS4)\s*)?只读(?:查询|分析)?(?:测试)?', note))
+        r'开始处理|(?:(?:DS4|QS4|PS4)\s*)?只读(?:查询|分析)?(?:测试)?', note)) or has_source_read_restriction(text)
     return {
         'schema': 'ticket-read-scope/v2', 'accepted_event_id': accepted_event_id,
         'system': system, 'client': SYSTEM_CLIENTS.get(system, ''),
@@ -235,6 +272,52 @@ def freeze_scope(system, title, description, acceptance_note, accepted_event_id)
 def allowed_value(value, scope, field):
     values = scope.get('document_keys', {}).get(field, [])
     return any(same_value(value, original, field) for original in values)
+
+
+
+def validate_catalog_attestation(scope, obj, kind, envelope):
+    """Validate bounded operator-supplied metadata, never a model instruction.
+
+    This is not a signature: only the trusted, explicitly requested operator
+    command may accept an attestation after an independent SAP identity check.
+    Production catalogue search remains disabled.
+    """
+    if scope.get('system') not in {'DS4', 'QS4'} or scope.get('client') != SYSTEM_CLIENTS.get(scope.get('system')):
+        raise PolicyError('catalog_system_not_allowed')
+    # SAP catalogue search uses LIKE, where underscore is a wildcard.
+    if not isinstance(obj, str) or not re.fullmatch(r'[A-Z][A-Z0-9]{2,69}', obj):
+        raise PolicyError('catalog_object_not_exact')
+    if obj not in scope.get('objects', []) or obj in DATA_TABLES:
+        raise PolicyError('object_outside_scope')
+    kinds = scope.get('source_kinds')
+    if not isinstance(kinds, dict) or not isinstance(kind, str) or kind not in {'fm', 'prog', 'class'} or kinds.get(obj):
+        raise PolicyError('source_kind_already_bound')
+    exact_keys(envelope, {'pattern', 'results', '_evidence'})
+    evidence = envelope['_evidence']
+    exact_keys(evidence, {'trust', 'instructionAuthority', 'system', 'client', 'user', 'command', 'object', 'contentSha256'})
+    if (evidence['trust'] != 'UNTRUSTED_EVIDENCE' or evidence['instructionAuthority'] is not False
+            or evidence['system'] != scope['system'] or evidence['client'] != scope['client']
+            or evidence['command'] != 'search' or evidence['object'] != obj or envelope['pattern'] != obj
+            or not isinstance(evidence['user'], str) or not evidence['user']):
+        raise PolicyError('catalog_evidence_mismatch')
+    content = {'pattern': envelope['pattern'], 'results': envelope['results']}
+    if not isinstance(evidence['contentSha256'], str) or not re.fullmatch(r'[0-9a-f]{64}', evidence['contentSha256']) or digest(content) != evidence['contentSha256']:
+        raise PolicyError('catalog_evidence_mismatch')
+    results = envelope['results']
+    exact_keys(results, {'table', 'prog', 'fm', 'class'})
+    matches = []
+    for category, rows in results.items():
+        if not isinstance(rows, list) or len(rows) > 2:
+            raise PolicyError('catalog_evidence_invalid')
+        for row in rows:
+            if not isinstance(row, dict) or row.get('name') != obj:
+                raise PolicyError('catalog_evidence_invalid')
+            if category == 'class' and row.get('kind') != 'class':
+                raise PolicyError('catalog_evidence_invalid')
+            matches.append(category)
+    if matches != [kind]:
+        raise PolicyError('catalog_type_ambiguous')
+    return evidence['contentSha256']
 
 
 def validate_plan(plan, scope):

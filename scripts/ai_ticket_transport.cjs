@@ -9,7 +9,7 @@ const FIELDS = {
   claim: [['operation', 'ticket_id', 'version'], []],
   renew: [['operation', 'run_id', 'lease_token'], []],
   reply: [['operation', 'run_id', 'lease_token', 'payload'], []],
-  defer: [['operation', 'run_id', 'lease_token', 'reason'], []],
+  defer: [['operation', 'run_id', 'lease_token', 'reason'], ['detail_code']],
   query_reserve: [['operation', 'run_id', 'lease_token', 'request_key', 'plan'], []],
   query_complete: [['operation', 'run_id', 'lease_token', 'query_id', 'result', 'error'], []],
 };

@@ -96,6 +96,8 @@ npm --prefix frontend run dev
 
 AI 节点监控、附件累计容量和本机备份恢复改进已于 2026-10-27 上线，范围及验证见 [运行保障发布记录](docs/reviews/operations-resilience/README.md)。
 
+本地待审阅的 AI 对象类型识别与受阻原因改进见 [本轮修复记录](docs/reviews/ai-object-type-followup/README.md)；本轮尚未发布。
+
 ## 通知规则与钉钉配置
 
 | 事件 | 站内提醒 | 同一钉钉协作群 |

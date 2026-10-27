@@ -108,6 +108,7 @@ class TicketProcessor:
                 last_renewed = started
 
         receipts, observations = {}, []
+        scope, decision = {}, None
         try:
             scope = lease['read_scope']
             if scope.get('restriction_unresolved'): raise WorkerError('context_incomplete')
@@ -157,8 +158,25 @@ class TicketProcessor:
             raise WorkerError('time_limit')
         except LeaseLost:
             return {'outcome': 'skipped', 'reason': 'lease_changed'}
-        except (WorkerError, PolicyError, ValueError, TypeError, KeyError, OSError) as error:
-            return self.gateway('defer', **auth, reason=error.code if isinstance(error, WorkerError) else 'authorization_missing')
+        except WorkerError as error:
+            details = {'detail_code': error.detail_code} if error.detail_code else {}
+            return self.gateway('defer', **auth, reason=error.code, **details)
+        except PolicyError as error:
+            code = str(error)
+            if code == 'source_kind_outside_scope':
+                plan = decision.get('plan', {}) if isinstance(decision, dict) else {}
+                obj = plan.get('object') if isinstance(plan, dict) else None
+                kinds = scope.get('source_kinds') if isinstance(scope, dict) else None
+                known = kinds.get(obj, []) if isinstance(kinds, dict) else None
+                objects = scope.get('objects', []) if isinstance(scope, dict) else []
+                detail = 'source_type_missing' if isinstance(objects, list) and obj in objects and isinstance(known, list) and not known else 'source_type_not_authorized'
+            elif code in {'object_outside_scope', 'document_outside_scope', 'business_object_outside_scope', 'scope_unresolved'}:
+                detail = 'plan_outside_scope'
+            else:
+                detail = 'plan_invalid'
+            return self.gateway('defer', **auth, reason='authorization_missing', detail_code=detail)
+        except (ValueError, TypeError, KeyError, OSError):
+            return self.gateway('defer', **auth, reason='runtime_error', detail_code='executor_error')
 
 
 def run_queue(gateway, planner, reader):

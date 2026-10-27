@@ -3,7 +3,7 @@ import sys
 import uuid
 from django.core.management.base import BaseCommand,CommandError
 from rest_framework.exceptions import ValidationError
-from desk.ai import candidate_page,claim,publish,defer,renew,ticket_context,enabled,request_retry
+from desk.ai import candidate_page,claim,publish,defer,renew,ticket_context,enabled,request_retry,request_blocked_followup
 from desk.models import Ticket,TicketAIRun
 
 
@@ -14,6 +14,8 @@ class Command(BaseCommand):
         sub=parser.add_subparsers(dest='operation',required=True)
         listing=sub.add_parser('list');listing.add_argument('--after-id',type=int,default=0);listing.add_argument('--limit',type=int,default=10)
         sub.add_parser('health')
+        cont=sub.add_parser('continue');cont.add_argument('--ticket-id',type=int,required=True)
+        cont.add_argument('--version',type=int,required=True);cont.add_argument('--request-key',type=uuid.UUID,required=True)
         for name in ['get','claim','retry']:
             item=sub.add_parser(name);item.add_argument('--ticket-id',type=int,required=True)
             if name in ['claim','retry']:item.add_argument('--version',type=int,required=True)
@@ -31,12 +33,16 @@ class Command(BaseCommand):
             if op=='list':result=candidate_page(options['after_id'],options['limit'])
             else:
                 if not enabled():raise CommandError('AI 工单自动跟进尚未启用。')
-                if op in ['get','claim','retry']:
+                if op in ['get','claim','retry','continue']:
                     if options['ticket_id']<1:raise ValueError()
                     if op=='get':result=ticket_context(Ticket.objects.get(pk=options['ticket_id']))
                     else:
                         if options['version']<1:raise ValueError()
-                        result=(request_retry if op=='retry' else claim)(options['ticket_id'],options['version'])
+                        if op=='continue':
+                            raw=sys.stdin.read(65537)
+                            if len(raw)>65536:raise ValueError()
+                            result=request_blocked_followup(options['ticket_id'],options['version'],options['request_key'],json.loads(raw))
+                        else:result=(request_retry if op=='retry' else claim)(options['ticket_id'],options['version'])
                 else:
                     raw=sys.stdin.read(65537)
                     if len(raw)>65536:raise ValueError()
