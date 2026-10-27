@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { api, post } from "../api";
+import { api, post, ApiError } from "../api";
 import { refreshStats } from "../state";
 import { dateTime, type Notice, type Page } from "../types";
 const items = ref<Notice[]>([]),
@@ -9,28 +9,40 @@ const items = ref<Notice[]>([]),
   unread = ref(false),
   error = ref(""),
   busy = ref(false);
+let sequence = 0;
 async function load() {
+  const seq = ++sequence;
   error.value = "";
   busy.value = true;
   try {
     const data = await api<Page<Notice>>(
       `/notifications?page=${page.value}&unread=${unread.value}`,
     );
+    if (seq !== sequence) return;
     items.value = data.results;
     count.value = data.count;
     await refreshStats();
   } catch (e) {
+    if (seq !== sequence) return;
+    if (e instanceof ApiError && e.status === 404 && page.value > 1) {
+      page.value = 1;
+      await load();
+      return;
+    }
     error.value = (e as Error).message;
   } finally {
-    busy.value = false;
+    if (seq === sequence) busy.value = false;
   }
 }
 async function markAll() {
+  if (busy.value) return;
   busy.value = true;
   try {
     await post("/notifications");
+    page.value = 1;
+    items.value = [];
+    if (unread.value) count.value = 0;
     await load();
-    await refreshStats();
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
@@ -38,6 +50,7 @@ async function markAll() {
   }
 }
 function turn(n: number) {
+  if (busy.value) return;
   page.value = n;
   void load();
 }
@@ -54,6 +67,7 @@ onMounted(load);
     ><input
       type="checkbox"
       v-model="unread"
+      :disabled="busy"
       @change="
         page = 1;
         load();

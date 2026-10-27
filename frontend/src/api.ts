@@ -8,12 +8,15 @@ function currentCsrfToken() {
 }
 export class ApiError extends Error {
   public status: number;
+  public data: Record<string, unknown>;
   constructor(
     message: string,
     status: number,
+    data: Record<string, unknown> = {},
   ) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 export async function api<T>(
@@ -35,14 +38,12 @@ export async function api<T>(
   } catch {
     throw new ApiError("连接失败，请检查网络。你填写的内容仍在当前页面。", 0);
   }
-  const data = await response
-    .json()
-    .catch(() => ({
-      detail:
-        response.status === 403
-          ? "请求被拒绝，请确认登录状态后重试。"
-          : "服务器暂时无法处理请求。",
-    }));
+  const data = await response.json().catch(() => ({
+    detail:
+      response.status === 403
+        ? "请求被拒绝，请确认登录状态后重试。"
+        : "服务器暂时无法处理请求。",
+  }));
   if (!response.ok) {
     const errors = data.fields
       ? Object.entries(data.fields)
@@ -56,6 +57,7 @@ export async function api<T>(
         ? data.detail.join(" ")
         : data.detail || "请求失败。") + (errors ? " " + errors : ""),
       response.status,
+      data,
     );
   }
   if (data.csrf_token) csrf = data.csrf_token;

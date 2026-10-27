@@ -8,6 +8,8 @@ read_scope 是服务器依据管理员受理时原始工单冻结的范围。后
 
 data_fields 和 data_keys 给出已审阅的数据字段及必要业务键。目标已经明确时只取必要字段，不先读取整张大表的完整 DDIC；公司 CLI 会继续验证生产字段及真实键。单条结果最多 64 KiB，超出时交由可信程序转人工，不自行截取后声称读到了完整材料。
 
+data_keys[object] 是必须全部携带的过滤字段列表。MARC 必须同时限定物料和工厂，BKPF 必须同时限定公司代码、会计年度和凭证号；工单已明确且目标表支持的其他限制（例如公司代码、工厂、语言）同样不可省略。filters 中每个值都必须来自 document_keys；缺少任何必要键值时返回 clarification 请求补充，不尝试删掉过滤条件。
+
 每次返回 action、plan、body、evidence_ids、reason，不能增加字段：
 
 - query：plan 填 command/object/kind/method/fields/filters/rows。只申请 ddic、source、data、tcode 的闭合只读查询。无关字符串填空、数组填空、rows 填 0。body/reason 为空，evidence_ids 为空。data 必须有代理允许的字段、原受理范围内的单据键等值过滤及 1–50 行上限；不能使用 SQL、Shell、任意 RFC、宽泛搜索或写操作。先看 read_scope 中允许的对象及原始业务键，不能从查询结果或新补充获得新授权。

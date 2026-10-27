@@ -14,7 +14,7 @@ from rest_framework.exceptions import ValidationError
 
 from .models import Audit, Event, Ticket, TicketAIRun, TicketAIQuery, User
 from .services import notify_for_event
-from .ai_policy import freeze_scope, document_keys, DATA_TABLES, MAX_QUERIES
+from .ai_policy import freeze_scope, document_keys, required_data_keys, DATA_TABLES, MAX_QUERIES
 
 SYSTEM_CLIENTS = {'DS4': '110', 'QS4': '120', 'PS4': '100'}
 BLOCK_REASONS = {'sap_unavailable', 'authorization_missing', 'context_incomplete', 'evidence_incomplete', 'runtime_error', 'time_limit'}
@@ -43,7 +43,8 @@ def accepted_scope(ticket, accepted):
     # A missing document key may be supplied once by the authenticated submitter.
     # This narrows an accepted object; it cannot replace an existing key or add an
     # object/system. Later messages never append additional authorized documents.
-    primary = {DATA_TABLES[obj][1] for obj in scope['objects'] if obj in DATA_TABLES}
+    primary = {field for obj in scope['objects'] if obj in DATA_TABLES
+               for field in DATA_TABLES[obj][1].split()}
     missing = primary - set(scope.get('document_keys', {}))
     if missing:
         followups = ticket.events.filter(kind='reply', actor_id=ticket.owner_id, actor_role='consultant',
@@ -54,6 +55,8 @@ def accepted_scope(ticket, accepted):
                 if len(supplied.get(field, [])) == 1:
                     scope['document_keys'][field] = supplied[field]
                     scope.setdefault('key_completion_events', {})[field] = followup.pk
+    scope['data_keys'] = {obj: sorted(required_data_keys(obj, scope))
+                          for obj in scope['objects'] if obj in DATA_TABLES}
     return scope
 
 

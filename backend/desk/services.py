@@ -1,3 +1,5 @@
+import hashlib
+import json
 from django.db import transaction
 from zoneinfo import ZoneInfo
 from django.db.models import Exists, OuterRef, Q, F
@@ -6,6 +8,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from .errors import Conflict
 from .models import User, Ticket, Event, Attachment, Notification, Delivery, SYSTEMS
 from .uploads import validate_uploads
+from .identifiers import positive_id
 
 def scoped_tickets(user):
     qs = Ticket.objects.all()
@@ -20,15 +23,14 @@ def filtered_tickets(user, params):
         if params.get(key):
             qs = qs.filter(**{key: params[key]})
     if user.role == 'admin' and params.get('owner'):
-        if not params['owner'].isdigit():
-            raise ValidationError('提交人参数无效。')
-        qs = qs.filter(owner_id=int(params['owner']))
+        qs = qs.filter(owner_id=positive_id(params['owner'], '提交人参数无效。'))
     if params.get('q'):
         keyword = params['q'][:200]
         number = keyword.upper().removeprefix('REQ-').lstrip('0')
         query = Q(title__icontains=keyword) | Q(description__icontains=keyword) | Q(events__body__icontains=keyword)
-        if number.isdigit():
-            query |= Q(pk=int(number))
+        identifier = positive_id(number)
+        if identifier is not None:
+            query |= Q(pk=identifier)
         qs = qs.filter(query).distinct()
     scope = params.get('scope')
     if scope == 'archive':
@@ -78,20 +80,44 @@ def save_files(item, uploads, saved):
         saved.append((attachment.file.storage, attachment.file.name))
         attachment.save()
 
+def submission_fingerprint(data, uploads):
+    payload = {key: data.get(key, default) for key, default in {
+        'title': '', 'system': '', 'module': '', 'kind': '', 'priority': 'medium',
+        'due_date': None, 'description': '',
+    }.items()}
+    payload['files'] = []
+    for file, name, content_type in uploads:
+        digest = hashlib.sha256()
+        try:
+            for chunk in file.chunks():
+                digest.update(chunk)
+        finally:
+            file.seek(0)
+        payload['files'].append({'name': name, 'size': file.size, 'type': content_type, 'sha256': digest.hexdigest()})
+    # File order carries no business meaning; bytes and normalized names do.
+    payload['files'].sort(key=lambda item: (item['name'], item['sha256']))
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                                    separators=(',', ':'), default=str).encode()).hexdigest()
+
+
 def create_ticket(user, data, files):
     if user.role != 'consultant':
         raise PermissionDenied('请使用顾问账号提交需求。')
     if data.get('system') not in {code for code, _ in SYSTEMS}:
         raise ValidationError('请选择 SAP 系统。')
     uploads = validate_uploads(files)
+    fingerprint = submission_fingerprint(data, uploads)
     saved = []
     try:
         with transaction.atomic():
             User.objects.select_for_update().get(pk=user.pk)
             existing = Ticket.objects.filter(owner=user, request_key=data['request_key']).first()
             if existing:
+                if not existing.submission_fingerprint or existing.submission_fingerprint != fingerprint:
+                    raise Conflict({'detail': f'此提交编号已创建 {existing.number}，本次内容未保存。请打开原工单，在时间线补充。',
+                                    'ticket_id': str(existing.pk), 'code': 'submission_content_mismatch'})
                 return existing, False
-            ticket = Ticket.objects.create(owner=user, **data)
+            ticket = Ticket.objects.create(owner=user, submission_fingerprint=fingerprint, **data)
             item = event(ticket, user, 'created', body='提交了需求工单', to_status='pending')
             save_files(item, uploads, saved)
             notify_for_event(item)

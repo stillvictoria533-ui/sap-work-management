@@ -64,13 +64,33 @@ npm --prefix frontend run dev
 ## 业务规则
 
 1. 顾问提交后状态为待受理；管理员受理后进入处理中。
-2. 处理中可转待确认；顾问回复后提示管理员处理，不暗中改变业务状态。
-3. 管理员可将待确认转回处理中或标记已完成，随后关闭归档。
-4. 提前关闭需要填写说明。关闭后顾问只读；管理员须填写原因才能重新打开为处理中。
+2. 管理员将处理中工单提交验收后进入待验收；顾问回复只追加沟通，不暗中改变业务状态。
+3. 顾问可对自己的待验收工单确认完成，或说明原因退回处理中；管理员可填写说明直接完成任意未完成工单。
+4. 已完成即归档，不存在额外“关闭”状态；管理员及工单提交人均可填写原因重新打开为处理中。已完成时不可回复或修改排期。
 5. 工单创建者、初始状态和时间由服务器确定，提交后的原始描述不覆盖，纠正通过追加回复留痕。
 6. 账号停用、角色改变、密码重置使旧登录失效；用户改密码后仅当前登录保留。
 7. 管理员不能停用自己或修改自己的角色；至少保留一个启用的管理员。
 8. 当前登录用户决定可读范围，前端隐藏入口不替代接口鉴权。通知和附件也使用工单归属检查。
+
+状态动作以服务端 `backend/desk/services.py` 的 `ACTIONS` 为准：
+
+| 当前状态 | 管理员可执行的状态动作 | 本工单顾问可执行的状态动作 |
+| --- | --- | --- |
+| 待受理 | 开始处理、直接完成（需说明） | 无 |
+| 处理中 | 提交验收（需说明）、直接完成（需说明） | 无 |
+| 待验收 | 直接完成（需说明） | 确认完成、仍需处理（需说明） |
+| 已完成 | 重新打开（需说明） | 重新打开（需说明） |
+
+回复、排期、加急与状态动作独立。新建工单的幂等键同时绑定规范化字段及附件内容；相同键且内容相同返回原结果，内容不同返回 409 并保留草稿。缺少指纹的旧工单重试会提示打开原工单补充，避免猜测原始提交内容。详情每 30 秒检查版本，有更新时提示刷新，刷新保留当前草稿。
+
+| 目录 | 维护范围 |
+| --- | --- |
+| `backend/desk/`、`frontend/`、`scripts/ai_ticket*` | 当前工单业务与受控 AI 跟进 |
+| `backend/assistant/` | 历史独立聊天兼容接口，仅管理员可用，provider 默认关闭；按每次入队时间计入滚动 24 小时额度 |
+| `connector/`、`scripts/windows/` | 连接器试点及离线协议验证，未接入现行工单 AI 执行链路 |
+| `design-v3/` | 设计参考，不参与生产构建 |
+
+2026-10-27 优先级修复的范围、验证及发布注意事项见 [本地修复审阅](docs/reviews/audit-priority-fixes/README.md)。该记录明确区分已验证修复和后续容量、监控、灾备建议。
 
 ## 通知规则与钉钉配置
 
@@ -166,15 +186,15 @@ docker compose --env-file .env.production up -d api worker web
 ## 验证
 
 ```sh
-.venv/bin/python backend/manage.py test desk
-python3 -m unittest discover -s tests -p 'test_deployment.py'
-python3 -m unittest discover -s tests -p 'test_ai_ticket_dispatch.py'
+.venv/bin/python backend/manage.py test desk assistant
+python3 -m unittest discover -s tests -p 'test_*.py'
+node --test connector/connector.test.mjs
 .venv/bin/python backend/manage.py makemigrations --check --dry-run
 npm --prefix frontend run build
 npm --prefix frontend test
 npm --prefix frontend audit --omit=dev --registry=https://registry.npmjs.org
 ```
 
-测试覆盖会话/CSRF、权限隔离、附件伪装与限制、回滚清理、工单全流程、版本冲突、重复提交、筛选与导出、已读高水位、账号禁用/重置、钉钉签名/消息载荷/队列重试，以及 AI 重试时间预算。CI 配置执行 PostgreSQL 后端测试、部署脚本测试、AI 调度器 mock 测试、迁移检查、前端单测与构建，不包含自动发布步骤；本地无 Docker/PostgreSQL 时测试使用 SQLite，不能据此宣称生产容器或 PostgreSQL 已经实机验收。
+测试覆盖会话/CSRF、权限隔离、附件伪装与限制、回滚清理、工单全流程、版本冲突、提交内容指纹、筛选与流式导出、已读高水位、账号禁用/重置与改密交错、钉钉队列、AI 查询完整业务范围，以及真实 Vue 组件路由复用、迟到响应、发送中编辑、通知分页和详情更新提示。CI 执行 `desk + assistant` PostgreSQL 测试、全部 Python 脚本测试、Node 连接器测试、迁移检查、前端单测与构建，不包含自动发布步骤；本地无 PostgreSQL 时行锁并发测试跳过，不能据此宣称生产容器或 PostgreSQL 已经实机验收。
 
 `design-v3/` 保留原型，仅供设计参考；它不是正式应用，生产 Docker 构建会排除这个目录。

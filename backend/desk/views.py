@@ -10,7 +10,7 @@ from django.conf import settings
 from django.db import transaction, connection, IntegrityError
 from django.db.models import Q, Count, F
 from django.db.models.functions import TruncDate
-from django.http import JsonResponse, HttpResponse, FileResponse, Http404
+from django.http import JsonResponse, StreamingHttpResponse, FileResponse, Http404
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -22,7 +22,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from .models import User, Ticket, Event, Attachment, Notification, Delivery, Audit, LoginBucket, ExpediteRequest
 from .permissions import ActiveAccount, Admin, SignedIn
 from .pagination import Pagination
-from .serializers import UserSerializer, AccountInput, PasswordInput, TicketInput, ReplyInput, StatusInput, ScheduleInput, TicketSerializer, TicketDetailSerializer, CalendarTicketSerializer, NotificationSerializer, DeliverySerializer
+from .serializers import UserSerializer, AccountInput, PasswordInput, TicketInput, ReplyInput, StatusInput, ScheduleInput, TicketListSerializer, TicketDetailSerializer, CalendarTicketSerializer, NotificationSerializer, DeliverySerializer
 from .services import scoped_tickets, filtered_tickets, create_ticket, reply_ticket, change_ticket_status, change_ticket_schedule, scoped_notifications
 
 @require_GET
@@ -91,18 +91,23 @@ class Password(APIView):
     def post(self, request):
         serializer = PasswordInput(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        user = request.user
         data = serializer.validated_data
-        if not user.must_change_password and not user.check_password(data['current_password']):
-            raise ValidationError('当前密码不正确。')
-        if user.check_password(data['password']):
-            raise ValidationError('新密码不能与旧密码相同。')
         with transaction.atomic():
+            # Share AccountDetail's row lock. Authentication may have loaded the
+            # user before a concurrent reset, disable or role change committed.
+            user = User.objects.select_for_update().get(pk=request.user.pk)
+            if not user.is_active or request.session.get('version') != user.session_version:
+                raise PermissionDenied('账号状态已变化，请重新登录。')
+            if not user.must_change_password and not user.check_password(data['current_password']):
+                raise ValidationError('当前密码不正确。')
+            if user.check_password(data['password']):
+                raise ValidationError('新密码不能与旧密码相同。')
             user.set_password(data['password'])
             user.must_change_password = False
             user.session_version += 1
             user.save(update_fields=['password', 'must_change_password', 'session_version'])
             Audit.objects.create(actor=user, action='password_changed', target=str(user.pk))
+        request.user = user
         update_session_auth_hash(request, user)
         request.session['version'] = user.session_version
         return Response({'user': UserSerializer(user).data, 'csrf_token': get_token(request)})
@@ -116,10 +121,10 @@ class TicketList(APIView):
             active=Count('pk', filter=~Q(status='done'), distinct=True),
             unread_tickets=Count('pk', filter=Q(unread=True), distinct=True),
         )
-        qs = filtered_tickets(request.user, request.query_params)
+        qs = filtered_tickets(request.user, request.query_params).defer('description')
         paginator = Pagination()
         page = paginator.paginate_queryset(qs, request)
-        response = paginator.get_paginated_response(TicketSerializer(page, many=True).data)
+        response = paginator.get_paginated_response(TicketListSerializer(page, many=True).data)
         response.data['tab_counts'] = tab_counts
         return response
     def post(self, request):
@@ -132,6 +137,11 @@ class TicketDetail(APIView):
     def get(self, request, pk):
         ticket = get_object_or_404(scoped_tickets(request.user).prefetch_related('events__attachments'), pk=pk)
         return Response(TicketDetailSerializer(ticket).data)
+
+class TicketVersion(APIView):
+    def get(self, request, pk):
+        ticket = get_object_or_404(scoped_tickets(request.user), pk=pk)
+        return Response({'id': ticket.pk, 'version': ticket.version})
 
 class DevelopmentCalendar(APIView):
     permission_classes = [ActiveAccount]
@@ -262,27 +272,40 @@ class Export(APIView):
     permission_classes = [Admin]
     def get(self, request):
         qs = filtered_tickets(request.user, request.query_params)
-        if qs.count() > 10000:
+        ticket_count = qs.count()
+        if ticket_count > 10000:
             raise ValidationError('请缩小筛选范围至 10000 条工单以内。')
         mode = request.query_params.get('mode', 'tickets')
         if mode not in ['tickets', 'events']:
             raise ValidationError('导出类型无效。')
-        response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="sap-desk-{mode}-{timezone.localdate()}.csv"'
-        response.write('\ufeff')
-        writer = csv.writer(response)
-        if mode == 'tickets':
-            writer.writerow(['编号', '标题', '系统', '模块', '类型', '优先级', '状态', '提交人', '期望完成日期', '开发预计完成日期', '排期需重新评估', '描述', '创建时间', '更新时间'])
-            for t in qs.iterator():
-                writer.writerow(map(safe_csv, [t.number, t.title, t.get_system_display() or '未指定', t.module, t.kind, t.get_priority_display(), t.get_status_display(), t.owner.name, t.due_date, t.estimated_completion_date, '是' if t.estimate_needs_review else '否', t.description, timezone.localtime(t.created_at).isoformat(), timezone.localtime(t.updated_at).isoformat()]))
-        else:
+        events = None
+        if mode == 'events':
             events = Event.objects.filter(ticket__in=qs).select_related('ticket')
             if events.count() > 50000:
                 raise ValidationError('沟通记录超过 50000 条，请缩小筛选范围。')
-            writer.writerow(['编号', '操作人', '角色', '操作', '内容', '原状态', '新状态', '操作时间'])
-            for e in events.iterator():
-                writer.writerow(map(safe_csv, [e.ticket.number, e.actor_name, e.actor_role, e.get_kind_display(), e.body, e.from_status, e.to_status, timezone.localtime(e.created_at).isoformat()]))
-        Audit.objects.create(actor=request.user, action='export', target=mode, detail={'ticket_count': qs.count()})
+
+        class CSVBuffer:
+            def write(self, value):
+                return value
+
+        writer = csv.writer(CSVBuffer())
+        def stream():
+            yield '\ufeff'
+            yield from rows()
+
+        def rows():
+            if mode == 'tickets':
+                yield writer.writerow(['编号', '标题', '系统', '模块', '类型', '优先级', '状态', '提交人', '期望完成日期', '开发预计完成日期', '排期需重新评估', '描述', '创建时间', '更新时间'])
+                for t in qs[:10000].iterator(chunk_size=500):
+                    yield writer.writerow(map(safe_csv, [t.number, t.title, t.get_system_display() or '未指定', t.module, t.kind, t.get_priority_display(), t.get_status_display(), t.owner.name, t.due_date, t.estimated_completion_date, '是' if t.estimate_needs_review else '否', t.description, timezone.localtime(t.created_at).isoformat(), timezone.localtime(t.updated_at).isoformat()]))
+            else:
+                yield writer.writerow(['编号', '操作人', '角色', '操作', '内容', '原状态', '新状态', '操作时间'])
+                for e in events[:50000].iterator(chunk_size=500):
+                    yield writer.writerow(map(safe_csv, [e.ticket.number, e.actor_name, e.actor_role, e.get_kind_display(), e.body, e.from_status, e.to_status, timezone.localtime(e.created_at).isoformat()]))
+
+        response = StreamingHttpResponse(stream(), content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="sap-desk-{mode}-{timezone.localdate()}.csv"'
+        Audit.objects.create(actor=request.user, action='export', target=mode, detail={'ticket_count': ticket_count})
         return response
 
 class Accounts(APIView):

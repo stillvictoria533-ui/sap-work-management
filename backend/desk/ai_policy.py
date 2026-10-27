@@ -19,14 +19,14 @@ FIELD = re.compile(r'^[A-Z][A-Z0-9_]{0,29}$')
 DATA_TABLES = {
     'MARA': ('物料', 'MATNR', 'MATNR MTART MATKL MEINS LVORM MSTAE'),
     'MAKT': ('物料', 'MATNR', 'MATNR SPRAS MAKTX'),
-    'MARC': ('物料', 'MATNR', 'MATNR WERKS DISMM DISPO BESKZ SOBSL LVORM'),
+    'MARC': ('物料', 'MATNR WERKS', 'MATNR WERKS DISMM DISPO BESKZ SOBSL LVORM'),
     'EKKO': ('采购订单', 'EBELN', 'EBELN BUKRS BSTYP BSART LIFNR EKORG EKGRP BEDAT LOEKZ'),
     'EKPO': ('采购订单', 'EBELN', 'EBELN EBELP MATNR WERKS LGORT MENGE MEINS LOEKZ ELIKZ'),
     'VBAK': ('销售订单', 'VBELN', 'VBELN AUART VKORG VTWEG SPART ERDAT'),
     'VBAP': ('销售订单', 'VBELN', 'VBELN POSNR MATNR WERKS KWMENG VRKME'),
     'LIKP': ('交货单', 'VBELN', 'VBELN LFART WADAT WADAT_IST'),
     'LIPS': ('交货单', 'VBELN', 'VBELN POSNR MATNR WERKS LGORT LFIMG VRKME'),
-    'BKPF': ('会计凭证', 'BELNR', 'BUKRS BELNR GJAHR BLART BLDAT BUDAT'),
+    'BKPF': ('会计凭证', 'BUKRS BELNR GJAHR', 'BUKRS BELNR GJAHR BLART BLDAT BUDAT'),
 }
 KEY_LABELS = {
     'MATNR': ('物料编码', '物料编号', '物料', 'MATNR'), 'WERKS': ('工厂', 'WERKS'),
@@ -46,6 +46,16 @@ def canonical(value):
 
 def digest(value):
     return hashlib.sha256(canonical(value).encode()).hexdigest()
+
+
+def required_data_keys(obj, scope):
+    """Derive from reviewed code, including for scopes accepted before this rule.
+
+    A supplied organization/year/language limit is mandatory on every table
+    that supports it. The model may choose a scoped value, never omit the limit.
+    """
+    _label, keys, fields = DATA_TABLES[obj]
+    return set(keys.split()) | (set(fields.split()) & set(scope.get('document_keys', {})))
 
 
 def exact_keys(value, required, optional=()):
@@ -99,7 +109,8 @@ def freeze_scope(system, title, description, acceptance_note, accepted_event_id)
         'system': system, 'client': SYSTEM_CLIENTS.get(system, ''),
         'objects': sorted(objects)[:100], 'document_keys': keys, 'source_kinds': source_kinds(text, objects),
         'data_fields': {obj: DATA_TABLES[obj][2].split() for obj in sorted(objects & set(DATA_TABLES))},
-        'data_keys': {obj: DATA_TABLES[obj][1] for obj in sorted(objects & set(DATA_TABLES))},
+        'data_keys': {obj: sorted(required_data_keys(obj, {'document_keys': keys}))
+                      for obj in sorted(objects & set(DATA_TABLES))},
         'source_hash': digest([system, title, description, acceptance_note]),
         'restriction_unresolved': unresolved,
     }
@@ -146,7 +157,7 @@ def validate_plan(plan, scope):
     elif command == 'data':
         if set(plan) - {'command', 'object', 'fields', 'filters', 'rows'} or obj not in DATA_TABLES:
             raise PolicyError('data_table_not_allowed')
-        _label, key, field_list = DATA_TABLES[obj]
+        _label, _keys, field_list = DATA_TABLES[obj]
         fields, filters, rows = plan.get('fields'), plan.get('filters'), plan.get('rows', 20)
         if not isinstance(fields, list) or not 1 <= len(fields) <= 16 or any(
             not isinstance(field, str) or field not in field_list.split() for field in fields
@@ -165,7 +176,9 @@ def validate_plan(plan, scope):
                 raise PolicyError('document_outside_scope')
             seen.add(field)
             clean_filters.append({'field': field, 'value': value})
-        if key not in seen or isinstance(rows, bool) or not isinstance(rows, int) or not 1 <= rows <= 50:
+        if not required_data_keys(obj, scope) <= seen:
+            raise PolicyError('required_filters_missing')
+        if isinstance(rows, bool) or not isinstance(rows, int) or not 1 <= rows <= 50:
             raise PolicyError('bounded_key_required')
         result.update(fields=fields, filters=sorted(clean_filters, key=lambda item: item['field']), rows=rows)
     elif set(plan) != {'command', 'object'}:

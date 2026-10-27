@@ -31,12 +31,13 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: pip install -r backend/requirements.txt
-      - run: python -m unittest discover -s tests -p 'test_deployment.py'
-      - name: Test AI ticket dispatcher and execution boundary
-        run: python -m unittest discover -s tests -p 'test_ai_ticket*.py'
-      - run: python backend/manage.py test desk
+      - name: Test deployment, operations, connector and AI scripts
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - run: python backend/manage.py test desk assistant
       - run: python backend/manage.py makemigrations --check --dry-run
       - run: npm --prefix frontend ci
+      - name: Test legacy connector protocol
+        run: node --test connector/connector.test.mjs
       - name: Test frontend
         run: npm --prefix frontend test
       - run: npm --prefix frontend run build

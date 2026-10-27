@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { useRoute, onBeforeRouteLeave } from "vue-router";
+import { computed, ref, watch, onMounted, onUnmounted } from "vue";
+import { useRoute, onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import { readTicketListState, ticketListQuery } from "../ticketListState";
 import { api, post, download, ApiError } from "../api";
 import { user, refreshStats } from "../state";
@@ -35,27 +35,55 @@ const route = useRoute(),
   loading = ref(false),
   error = ref(""),
   conflict = ref(false),
+  newVersion = ref(0),
   pickerKey = ref(0),
   success = ref("");
 let sequence = 0;
+let mutationSequence = 0;
+function resetEditors() {
+  mutationSequence++;
+  body.value = reason.value = estimateDate.value = estimateReason.value = "";
+  selectedAction.value = startEstimate.value = success.value = error.value = "";
+  files.value = [];
+  editingSchedule.value =
+    expediteDirty.value =
+    busy.value =
+    conflict.value =
+      false;
+  newVersion.value = 0;
+  pickerKey.value++;
+}
+function currentMutation(id: number, operation: number) {
+  return (
+    String(route.params.id) === String(id) && operation === mutationSequence
+  );
+}
+function beginMutation() {
+  sequence++; // A GET started before this write must not overwrite its result.
+  loading.value = false;
+  busy.value = true;
+  return ++mutationSequence;
+}
 async function load() {
+  if (busy.value) return;
   const seq = ++sequence;
   loading.value = true;
   error.value = "";
   try {
     const t = await api<Ticket>("/tickets/" + route.params.id);
-    if (seq !== sequence) return;
+    if (seq !== sequence || (ticket.value && t.version < ticket.value.version))
+      return;
     ticket.value = t;
-    selectedAction.value = "";
-    startEstimate.value = t.estimated_completion_date || "";
-    if (t.status === "done") editingSchedule.value = false;
+    newVersion.value = 0;
+    if (!selectedAction.value)
+      startEstimate.value = t.estimated_completion_date || "";
     conflict.value = false;
     const last = t.events?.at(-1);
     if (last)
       await post("/tickets/" + t.id + "/read", { through_event: last.id });
     await refreshStats();
   } catch (e) {
-    error.value = (e as Error).message;
+    if (seq === sequence) error.value = (e as Error).message;
   } finally {
     if (seq === sequence) loading.value = false;
   }
@@ -63,48 +91,104 @@ async function load() {
 watch(
   () => route.params.id,
   () => {
+    resetEditors();
     ticket.value = null;
     void load();
   },
   { immediate: true },
 );
-onBeforeRouteLeave(
-  () =>
+function confirmLeave() {
+  if (busy.value)
+    return window.confirm("操作正在提交，确定离开？提交结果可稍后查看。");
+  return (
     (!body.value &&
       !reason.value &&
       !files.value.length &&
       !editingSchedule.value &&
       !selectedAction.value &&
       !expediteDirty.value) ||
-    window.confirm("内容尚未提交，确定离开？"),
+    window.confirm("内容尚未提交，确定离开？")
+  );
+}
+onBeforeRouteLeave(confirmLeave);
+onBeforeRouteUpdate(
+  (to, from) => to.params.id === from.params.id || confirmLeave(),
 );
+let poll: ReturnType<typeof setInterval> | undefined;
+let checking = false;
+async function checkForUpdates() {
+  if (
+    !ticket.value ||
+    busy.value ||
+    loading.value ||
+    checking ||
+    (typeof document !== "undefined" && document.visibilityState === "hidden")
+  )
+    return;
+  const id = ticket.value.id,
+    seq = sequence;
+  checking = true;
+  try {
+    const latest = await api<{ id: number; version: number }>(
+      `/tickets/${id}/version`,
+    );
+    if (
+      seq === sequence &&
+      ticket.value?.id === id &&
+      latest.version > ticket.value.version
+    ) {
+      newVersion.value = latest.version;
+    }
+  } catch {
+    // A transient background failure must not overwrite an editor's status.
+  } finally {
+    checking = false;
+  }
+}
+onMounted(() => {
+  poll = setInterval(() => void checkForUpdates(), 30000);
+});
+onUnmounted(() => {
+  sequence++;
+  mutationSequence++;
+  clearInterval(poll);
+});
+function acceptUpdate(updated: Ticket) {
+  if (
+    String(updated.id) === String(route.params.id) &&
+    (!ticket.value || updated.version >= ticket.value.version)
+  )
+    ticket.value = updated;
+}
 async function submit() {
-  if (!ticket.value) return;
+  if (!ticket.value || busy.value) return;
+  const { id, version } = ticket.value;
+  const submittedBody = body.value,
+    submittedFiles = [...files.value];
+  const operation = beginMutation();
   error.value = "";
   success.value = "";
-  busy.value = true;
   try {
     const data = new FormData();
-    data.set("body", body.value);
-    data.set("version", String(ticket.value.version));
+    data.set("body", submittedBody);
+    data.set("version", String(version));
 
-    files.value.forEach((f) => data.append("files", f));
-    const updated = await post<Ticket>(
-      "/tickets/" + ticket.value.id + "/reply",
-      data,
-    );
-    ticket.value = updated;
+    submittedFiles.forEach((f) => data.append("files", f));
+    const updated = await post<Ticket>("/tickets/" + id + "/reply", data);
+    if (!currentMutation(id, operation)) return;
+    acceptUpdate(updated);
 
-    body.value = "";
-    files.value = [];
+    if (body.value === submittedBody) body.value = "";
+    files.value = files.value.filter((file) => !submittedFiles.includes(file));
     pickerKey.value++;
     success.value = "回复已发送，工单状态未改变。";
     await refreshStats();
   } catch (e) {
+    if (!currentMutation(id, operation)) return;
     error.value = (e as Error).message;
     conflict.value = e instanceof ApiError && e.status === 409;
   } finally {
-    busy.value = false;
+    if (currentMutation(id, operation)) busy.value = false;
   }
 }
 const actionLabels: Record<string, string> = {
@@ -149,32 +233,41 @@ const reasonHint = computed(
     })[selectedAction.value] || "可补充说明（选填）",
 );
 async function changeStatus() {
-  if (!ticket.value || !selectedAction.value) return;
+  if (!ticket.value || !selectedAction.value || busy.value) return;
+  const { id, version, estimated_completion_date } = ticket.value;
+  const action = selectedAction.value,
+    submittedReason = reason.value,
+    estimate = startEstimate.value;
+  const operation = beginMutation();
   error.value = "";
   success.value = "";
-  busy.value = true;
   try {
-    ticket.value = await post<Ticket>(
-      "/tickets/" + ticket.value.id + "/status",
-      {
-        action: selectedAction.value,
-        version: ticket.value.version,
-        reason: reason.value,
-        ...(selectedAction.value === "start" &&
-        startEstimate.value !== (ticket.value.estimated_completion_date || "")
-          ? { estimated_completion_date: startEstimate.value || null }
-          : {}),
-      },
-    );
-    selectedAction.value = "";
-    reason.value = "";
+    const updated = await post<Ticket>("/tickets/" + id + "/status", {
+      action,
+      version,
+      reason: submittedReason,
+      ...(action === "start" && estimate !== (estimated_completion_date || "")
+        ? { estimated_completion_date: estimate || null }
+        : {}),
+    });
+    if (!currentMutation(id, operation)) return;
+    acceptUpdate(updated);
+    if (
+      selectedAction.value === action &&
+      reason.value === submittedReason &&
+      startEstimate.value === estimate
+    ) {
+      selectedAction.value = "";
+      reason.value = "";
+    }
     success.value = "状态已更新并记录在时间线中。";
     await refreshStats();
   } catch (e) {
+    if (!currentMutation(id, operation)) return;
     error.value = (e as Error).message;
     conflict.value = e instanceof ApiError && e.status === 409;
   } finally {
-    busy.value = false;
+    if (currentMutation(id, operation)) busy.value = false;
   }
 }
 const calendarReturn = computed(() =>
@@ -218,35 +311,44 @@ function editSchedule() {
   editingSchedule.value = true;
 }
 async function saveSchedule() {
-  if (!ticket.value) return;
+  if (!ticket.value || busy.value) return;
+  const { id, version } = ticket.value;
+  const date = estimateDate.value,
+    submittedReason = estimateReason.value;
+  const operation = beginMutation();
   error.value = "";
   success.value = "";
-  busy.value = true;
   try {
-    ticket.value = await post<Ticket>(
-      "/tickets/" + ticket.value.id + "/schedule",
-      {
-        estimated_completion_date: estimateDate.value || null,
-        reason: estimateReason.value,
-        version: ticket.value.version,
-      },
-    );
-    editingSchedule.value = false;
-    estimateReason.value = "";
+    const updated = await post<Ticket>("/tickets/" + id + "/schedule", {
+      estimated_completion_date: date || null,
+      reason: submittedReason,
+      version,
+    });
+    if (!currentMutation(id, operation)) return;
+    acceptUpdate(updated);
+    if (
+      estimateDate.value === date &&
+      estimateReason.value === submittedReason
+    ) {
+      editingSchedule.value = false;
+      estimateReason.value = "";
+    }
     success.value = "开发排期已保存。";
     await refreshStats();
   } catch (e) {
+    if (!currentMutation(id, operation)) return;
     error.value = (e as Error).message;
     conflict.value = e instanceof ApiError && e.status === 409;
   } finally {
-    busy.value = false;
+    if (currentMutation(id, operation)) busy.value = false;
   }
 }
 async function getFile(f: Attachment) {
+  const id = route.params.id;
   try {
     await download(f.url, f.original_name);
   } catch (e) {
-    error.value = (e as Error).message;
+    if (route.params.id === id) error.value = (e as Error).message;
   }
 }
 </script>
@@ -264,10 +366,18 @@ async function getFile(f: Attachment) {
     }}</RouterLink
   >
   <p v-if="loading" role="status" class="sd-muted">正在加载…</p>
+  <div class="sd-flex" v-if="ticket">
+    <button class="sd-button" :disabled="busy || loading" @click="load">
+      刷新工单（保留草稿）
+    </button>
+    <span v-if="newVersion > ticket.version" role="status" class="sd-small"
+      >工单有新回复或变更，刷新后查看。</span
+    >
+  </div>
   <div v-if="error" class="sd-error" role="alert">
     {{ error }}
-    <button v-if="conflict || !ticket" class="sd-button" @click="load">
-      刷新工单（保留回复）
+    <button v-if="!ticket" class="sd-button" :disabled="loading" @click="load">
+      重新加载工单
     </button>
   </div>
   <template v-if="ticket"
@@ -367,9 +477,10 @@ async function getFile(f: Attachment) {
       <p v-if="success" class="sd-small" role="status">{{ success }}</p>
     </section>
     <ExpeditePanel
+      :key="ticket.id"
       :ticket="ticket"
       :disabled="busy || conflict || editingSchedule || !!selectedAction"
-      @updated="ticket = $event"
+      @updated="acceptUpdate"
       @dirty="expediteDirty = $event"
       @refresh="load"
     />

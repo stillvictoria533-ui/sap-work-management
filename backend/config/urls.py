@@ -18,6 +18,7 @@ urlpatterns = [
     path('api/tickets/<int:pk>', v.TicketDetail.as_view()), path('api/tickets/<int:pk>/reply', v.TicketReply.as_view()),
     path('api/tickets/<int:pk>/status', v.TicketStatus.as_view()),
     path('api/tickets/<int:pk>/schedule', v.TicketSchedule.as_view()),
+    path('api/tickets/<int:pk>/version', v.TicketVersion.as_view()),
     path('api/tickets/<int:pk>/read', v.TicketRead.as_view()), path('api/attachments/<int:pk>/download', v.Download.as_view()),
     path('api/stats', v.Stats.as_view()), path('api/notifications', v.Notices.as_view()),
     path('api/accounts', v.Accounts.as_view()), path('api/accounts/<int:pk>', v.AccountDetail.as_view()),

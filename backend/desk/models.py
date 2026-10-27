@@ -27,6 +27,7 @@ class User(AbstractUser):
 class Ticket(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='tickets')
     request_key = models.UUIDField(default=uuid.uuid4)
+    submission_fingerprint = models.CharField(max_length=64, blank=True, default='')
     title = models.CharField(max_length=120)
     system = models.CharField(max_length=3, choices=SYSTEMS, blank=True, default='')
     module = models.CharField(max_length=10, choices=MODULES)

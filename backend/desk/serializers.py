@@ -20,7 +20,7 @@ class AccountInput(serializers.Serializer):
         return value.strip().lower()
 
 class PasswordInput(serializers.Serializer):
-    current_password = serializers.CharField(max_length=256, allow_blank=True, default='')
+    current_password = serializers.CharField(max_length=256, allow_blank=True, default='', trim_whitespace=False)
     password = serializers.CharField(max_length=256, trim_whitespace=False)
 
     def validate_password(self, value):
@@ -88,6 +88,11 @@ class TicketSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = ['id', 'number', 'title', 'system', 'module', 'kind', 'priority', 'due_date', 'estimated_completion_date', 'estimate_needs_review', 'description', 'status', 'next_actor', 'version', 'owner_id', 'owner_name', 'created_at', 'updated_at', 'unread']
+
+class TicketListSerializer(TicketSerializer):
+    class Meta(TicketSerializer.Meta):
+        fields = [field for field in TicketSerializer.Meta.fields if field != 'description']
+
 
 class TicketDetailSerializer(TicketSerializer):
     events = EventSerializer(many=True)

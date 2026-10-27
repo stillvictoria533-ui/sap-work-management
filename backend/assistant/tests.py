@@ -7,7 +7,7 @@ from django.test import TestCase, SimpleTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from desk.models import User, Ticket, Event, Delivery
+from desk.models import User, Ticket, Event, Delivery, Audit
 from .models import Conversation, Turn, WorkerState
 from .providers import ProviderError, Cancelled, codex_arguments, codex_environment, run_openai
 from .services import provider_state
@@ -201,6 +201,26 @@ class ChatTests(TestCase):
         Turn.objects.filter(conversation=item).update(status='completed')
         with override_settings(AI_TURNS_PER_DAY=1):
             self.assertEqual(self.send(item).status_code, 429)
+
+    @override_settings(AI_TURNS_PER_DAY=2)
+    def test_retries_of_yesterdays_turn_count_against_todays_budget(self):
+        self.ready()
+        item = self.conversation()
+        self.send(item)
+        turn = item.turns.get()
+        yesterday = timezone.now() - timedelta(days=2)
+        Turn.objects.filter(pk=turn.pk).update(status='failed', created_at=yesterday)
+        Audit.objects.filter(action='chat_question_saved').update(created_at=yesterday)
+        path = f'/api/assistant/conversations/{item.pk}/turns/{turn.pk}/retry'
+        for attempt in [1, 2]:
+            response = self.client.post(path, {'attempt': attempt}, format='json')
+            self.assertEqual(response.status_code, 200, response.data)
+            Turn.objects.filter(pk=turn.pk).update(status='failed')
+        response = self.client.post(path, {'attempt': 3}, format='json')
+        self.assertEqual(response.status_code, 429)
+        turn.refresh_from_db()
+        self.assertEqual(turn.attempt, 3)
+        self.assertEqual(Audit.objects.filter(action='chat_retried').count(), 2)
 
     def test_stale_worker_and_interrupted_jobs_have_honest_states(self):
         self.ready()

@@ -83,6 +83,19 @@ class ExecutionBoundaryTests(TestCase):
                 {'filters': [{'field': 'MATNR', 'value': "12345'; DROP TABLE X"}]}]:
             with self.subTest(delta=delta), self.assertRaises(PolicyError): self.reserve({**base, **delta})
 
+    def test_gateway_does_not_reserve_a_query_that_omits_accepted_plant(self):
+        ticket = self.make_ticket(system='PS4', description='核对 MARC 物料 "12345" 工厂 "1000"。')
+        lease = ai.claim(ticket.pk, ticket.version)
+        plan = {'command': 'data', 'object': 'MARC', 'fields': ['MATNR', 'WERKS'],
+                'filters': [{'field': 'MATNR', 'value': '12345'}], 'rows': 1}
+        with self.assertRaises(PolicyError):
+            self.reserve(plan, lease=lease)
+        self.assertFalse(TicketAIQuery.objects.exists())
+        plan['filters'].append({'field': 'WERKS', 'value': '1000'})
+        reserved = self.reserve(plan, lease=lease)
+        self.assertEqual(reserved['plan']['filters'], plan['filters'])
+        self.assertEqual(TicketAIQuery.objects.get().plan, reserved['plan'])
+
     def test_followup_does_not_expand_frozen_scope(self):
         original = self.lease['read_scope']
         ai.publish(self.lease['run_id'], self.lease['lease_token'], {'category': 'clarification', 'body': '请补充现象。', 'evidence': []})

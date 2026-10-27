@@ -86,10 +86,13 @@ def check_budget(user, conversation):
         raise Conflict('你还有一个问题正在处理，请完成或停止后再发送。')
     if conversation.turns.count() >= 100:
         raise ValidationError('此对话已达到 100 个问题，请新建对话继续。')
-    recent = Turn.objects.filter(conversation__owner=user, created_at__gte=timezone.now() - timedelta(days=1))
-    # Count attempts too, so retrying cannot bypass the daily provider-call budget.
-    from django.db.models import Sum
-    if recent.count() >= settings.AI_TURNS_PER_DAY or (recent.aggregate(total=Sum('attempt'))['total'] or 0) >= settings.AI_TURNS_PER_DAY:
+    since = timezone.now() - timedelta(days=1)
+    recent = Turn.objects.filter(conversation__owner=user, created_at__gte=since)
+    # These immutable audit entries are written in the same user-locked
+    # transaction as each enqueue. Retrying yesterday's turn counts today.
+    attempts = Audit.objects.filter(actor=user, created_at__gte=since).filter(
+        Q(action='chat_question_saved', detail__status='queued') | Q(action='chat_retried'))
+    if recent.count() >= settings.AI_TURNS_PER_DAY or attempts.count() >= settings.AI_TURNS_PER_DAY:
         raise Throttled(detail='今天的 AI 对话次数已达到上限，请稍后再试。')
 
 

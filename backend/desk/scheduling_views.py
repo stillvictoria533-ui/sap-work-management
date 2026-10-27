@@ -9,6 +9,7 @@ from .pagination import Pagination
 from .permissions import Admin
 from .serializers import TicketDetailSerializer
 from .services import scoped_tickets
+from .identifiers import positive_id
 from .scheduling import create_expedite, reject_expedite, preview_batch, commit_batch, EDITABLE
 from .scheduling_serializers import (ExpediteInput, ExpediteDecisionInput, ExpediteRequestSerializer,
                                      QueueTicketSerializer, BatchScheduleInput)
@@ -68,14 +69,14 @@ class DevelopmentQueue(APIView):
             keyword = request.query_params['q'][:120]
             numeric = keyword.upper().removeprefix('REQ-').lstrip('0')
             condition = Q(title__icontains=keyword)
-            if numeric.isdigit():
-                condition |= Q(pk=int(numeric))
+            identifier = positive_id(numeric)
+            if identifier is not None:
+                condition |= Q(pk=identifier)
             qs = qs.filter(condition)
         focus = request.query_params.get('focus_ticket')
         if focus:
-            if not focus.isdigit():
-                raise ValidationError('工单参数无效。')
-            qs = qs.annotate(focus=Case(When(pk=int(focus), then=Value(0)), default=Value(1), output_field=IntegerField())).order_by('focus', F('estimated_completion_date').asc(nulls_last=True), 'id')
+            identifier = positive_id(focus, '工单参数无效。')
+            qs = qs.annotate(focus=Case(When(pk=identifier, then=Value(0)), default=Value(1), output_field=IntegerField())).order_by('focus', F('estimated_completion_date').asc(nulls_last=True), 'id')
         else:
             qs = qs.order_by(F('estimated_completion_date').asc(nulls_last=True), 'id')
         paginator = Pagination()
