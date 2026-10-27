@@ -57,6 +57,26 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 5
 FILE_UPLOAD_PERMISSIONS = 0o600
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o700
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+
+
+def nonnegative_integer(name, default, minimum=0):
+    raw = os.getenv(name, str(default))
+    if not raw.isascii() or not raw.isdigit() or len(raw) > 19:
+        raise ImproperlyConfigured(f'{name} 必须是非负整数。')
+    value = int(raw)
+    if value < minimum or value > 9223372036854775807:
+        raise ImproperlyConfigured(f'{name} 超出支持范围。')
+    return value
+
+
+ATTACHMENT_TICKET_LIMIT_BYTES = nonnegative_integer('ATTACHMENT_TICKET_LIMIT_BYTES', 256 * 1024**2)
+ATTACHMENT_OWNER_LIMIT_BYTES = nonnegative_integer('ATTACHMENT_OWNER_LIMIT_BYTES', 1024**3)
+ATTACHMENT_GLOBAL_LIMIT_BYTES = nonnegative_integer('ATTACHMENT_GLOBAL_LIMIT_BYTES', 2 * 1024**3)
+ATTACHMENT_MIN_FREE_BYTES = nonnegative_integer('ATTACHMENT_MIN_FREE_BYTES', 3 * 1024**3)
+AI_HEARTBEAT_STALE_SECONDS = nonnegative_integer('AI_HEARTBEAT_STALE_SECONDS', 300, minimum=1)
+AI_BACKLOG_ALERT_SECONDS = nonnegative_integer('AI_BACKLOG_ALERT_SECONDS', 600, minimum=1)
+AI_FAILURE_ALERT_COUNT = nonnegative_integer('AI_FAILURE_ALERT_COUNT', 3, minimum=1)
+OPS_BACKUP_HEALTH_PATH = os.getenv('OPS_BACKUP_HEALTH_PATH', '/app/ops-health/backup.json')
 PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL', '').rstrip('/')
 DINGTALK_ENABLED = os.getenv('DINGTALK_ENABLED', 'false').lower() == 'true'
 DINGTALK_GROUP_TOKEN = os.getenv('DINGTALK_GROUP_TOKEN', '')

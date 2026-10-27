@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/tickets/<int:pk>/version', v.TicketVersion.as_view()),
     path('api/tickets/<int:pk>/read', v.TicketRead.as_view()), path('api/attachments/<int:pk>/download', v.Download.as_view()),
     path('api/stats', v.Stats.as_view()), path('api/notifications', v.Notices.as_view()),
+    path('api/ai-monitor', v.AIMonitor.as_view()),
     path('api/accounts', v.Accounts.as_view()), path('api/accounts/<int:pk>', v.AccountDetail.as_view()),
     path('api/audit', v.AuditList.as_view()), path('api/deliveries', v.Deliveries.as_view()),
     path('api/deliveries/<int:pk>/retry', v.RetryDelivery.as_view()),

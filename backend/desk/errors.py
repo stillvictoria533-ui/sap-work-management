@@ -7,6 +7,16 @@ class Conflict(APIException):
     status_code = 409
     default_detail = '该工单已被更新，请刷新后再提交。输入内容仍会保留。'
 
+
+class AttachmentCapacityExceeded(APIException):
+    status_code = 413
+    default_code = 'attachment_capacity_exceeded'
+
+
+class AttachmentStorageLow(APIException):
+    status_code = 507
+    default_code = 'attachment_storage_low'
+
 def exception_handler(exc, context):
     if isinstance(exc, TooManyFilesSent):
         return Response({'detail': '每次最多上传 5 个附件。'}, status=400)

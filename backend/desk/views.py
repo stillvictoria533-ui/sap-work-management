@@ -143,6 +143,16 @@ class TicketVersion(APIView):
         ticket = get_object_or_404(scoped_tickets(request.user).values('id', 'version'), pk=pk)
         return Response(ticket)
 
+
+class AIMonitor(APIView):
+    permission_classes = [Admin]
+
+    def get(self, request):
+        from .ai_monitor import monitor_summary
+        from .uploads import storage_summary
+        from .backup_status import backup_summary
+        return Response({**monitor_summary(), 'storage': storage_summary(), 'backup': backup_summary()})
+
 class DevelopmentCalendar(APIView):
     permission_classes = [ActiveAccount]
 

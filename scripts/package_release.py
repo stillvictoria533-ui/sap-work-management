@@ -15,10 +15,10 @@ def package_files(root):
     candidates += [root / 'backend/requirements.txt']
     candidates += [root / 'frontend' / name for name in FRONTEND_FILES]
     candidates += list((root / 'frontend/src').rglob('*'))
-    candidates += list((root / 'frontend/tests').glob('*.test.ts'))
+    candidates += list((root / 'frontend/tests').glob('*.ts'))
     candidates += list((root / 'frontend/public').rglob('*'))
     candidates += [p for p in (root / 'deploy').glob('*') if p.suffix in ['.template', '.service', '.timer', '.sh', '.sql', '.py']]
-    candidates += [p for p in (root / 'scripts').glob('*') if p.suffix in ['.py', '.sh']]
+    candidates += [p for p in (root / 'scripts').glob('*') if p.suffix in ['.py', '.sh', '.cjs', '.mjs']]
     candidates += list((root / 'docs').rglob('*.md'))
     candidates += list((root / 'tests').glob('test_*.py'))
     forbidden_parts = {'node_modules', '__pycache__', '.venv', 'private-media', 'certs', 'letsencrypt', 'acme-staging', 'backups'}

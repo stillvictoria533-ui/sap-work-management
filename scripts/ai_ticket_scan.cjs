@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { collectReadiness, heartbeatPayload } = require('./ai_ticket_readiness.cjs');
 const { AbstractClient } = require(path.join(
   os.homedir(), '.codex/mcp/tencent-lighthouse/node_modules/tencentcloud-sdk-nodejs-common/tencentcloud/common/abstract_client.js',
 ));
@@ -19,25 +20,30 @@ const client = new AbstractClient('tat.tencentcloudapi.com', '2020-10-28', {
   profile: { httpProfile: { reqTimeout: 30 } },
 });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const scanCode = [
-  'import hashlib',
-  'from desk.ai import candidate_page',
-  'after=0',
-  'for _ in range(100):',
-  '    page=candidate_page(after=after,limit=50)',
-  '    if not page["enabled"]: print("DISABLED"); break',
-  '    if page["results"]:',
-  '        markers="|".join(str(x["id"])+":"+str(x["version"])+":"+str(x["trigger_event_id"]) for x in page["results"])',
-  '        print("READY:"+hashlib.sha256(markers.encode()).hexdigest()[:16]); break',
-  '    if not page["has_more"]: print("EMPTY"); break',
-  '    after=page["next_after_id"]',
-  'else: print("SCAN_LIMIT")',
-].join('\n');
-const remoteCommand =
-  "cd /opt/sapdesk && docker compose --env-file .env.production exec -T api " +
-  "python manage.py shell --no-imports -c '" + scanCode + "'";
-
 async function scan() {
+  const encoded = heartbeatPayload(await collectReadiness());
+  const scanCode = [
+    'import hashlib, json, base64, logging',
+    'from desk.ai import candidate_page',
+    'try:',
+    '    from desk.ai_monitor import record_executor_heartbeat',
+    '    record_executor_heartbeat(json.loads(base64.b64decode("' + encoded + '")))',
+    'except Exception:',
+    '    logging.warning("AI executor heartbeat failed")',
+    'after=0',
+    'for _ in range(100):',
+    '    page=candidate_page(after=after,limit=50)',
+    '    if not page["enabled"]: print("DISABLED"); break',
+    '    if page["results"]:',
+    '        markers="|".join(str(x["id"])+":"+str(x["version"])+":"+str(x["trigger_event_id"]) for x in page["results"])',
+    '        print("READY:"+hashlib.sha256(markers.encode()).hexdigest()[:16]); break',
+    '    if not page["has_more"]: print("EMPTY"); break',
+    '    after=page["next_after_id"]',
+    'else: print("SCAN_LIMIT")',
+  ].join('\n');
+  const remoteCommand =
+    "cd /opt/sapdesk && docker compose --env-file .env.production exec -T api " +
+    "python manage.py shell --no-imports -c '" + scanCode + "'";
   const request = await client.request('RunCommand', {
     InstanceIds: ['lhins-9wkf7wc5'], CommandType: 'SHELL',
     Content: Buffer.from(remoteCommand).toString('base64'),

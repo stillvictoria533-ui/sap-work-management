@@ -78,6 +78,8 @@ async function logout() {
             <NavLink to="/accounts"><Icon name="users-round" />账号管理</NavLink
             ><NavLink to="/deliveries"
               ><Icon name="send" />钉钉通知</NavLink
+            ><NavLink to="/operations"
+              ><Icon name="shield-check" />运行状态</NavLink
             ></template
           >
         </nav>

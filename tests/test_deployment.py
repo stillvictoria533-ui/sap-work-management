@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from prepare_production_env import normalize_host, render_env, write_new
 from certificates import Certificates, CertError, certificate_arguments, exclusive_lock, load_config
-from package_release import create_package
+from package_release import create_package, package_files
 
 OPENSSL = next((str(p) for p in [Path('/opt/homebrew/opt/openssl@3/bin/openssl'), Path('/usr/local/opt/openssl@3/bin/openssl')] if p.exists()), shutil.which('openssl'))
 
@@ -39,6 +39,16 @@ class EnvironmentTests(unittest.TestCase):
                     self.assertTrue(member.isfile())
                     self.assertEqual(member.uid, 0)
                     self.assertNotIn(b'PRIVATE_PAYLOAD_42', archive.extractfile(member).read())
+
+    def test_release_contains_ai_runtime_and_frontend_test_support(self):
+        names = {path.relative_to(ROOT).as_posix() for path in package_files(ROOT)}
+        self.assertTrue({
+            'scripts/ai_ticket_readiness.cjs', 'scripts/ai_ticket_scan.cjs',
+            'scripts/ai_ticket_transport.cjs', 'scripts/ai_ticket_sap.mjs',
+            'frontend/tests/page-harness.ts', 'frontend/tests/operations-page.test.ts',
+            'scripts/restore_drill.py',
+        }.issubset(names))
+        self.assertFalse(any(name.startswith('ops-state/') or '/node_modules/' in name for name in names))
 
     def test_public_ipv4_and_domain(self):
         self.assertEqual(normalize_host('43.130.36.105'), '43.130.36.105')

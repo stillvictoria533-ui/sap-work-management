@@ -13,6 +13,7 @@ class Command(BaseCommand):
     def add_arguments(self,parser):
         sub=parser.add_subparsers(dest='operation',required=True)
         listing=sub.add_parser('list');listing.add_argument('--after-id',type=int,default=0);listing.add_argument('--limit',type=int,default=10)
+        sub.add_parser('health')
         for name in ['get','claim','retry']:
             item=sub.add_parser(name);item.add_argument('--ticket-id',type=int,required=True)
             if name in ['claim','retry']:item.add_argument('--version',type=int,required=True)
@@ -22,6 +23,11 @@ class Command(BaseCommand):
     def handle(self,*args,**options):
         try:
             op=options['operation']
+            if op=='health':
+                from desk.ai_monitor import monitor_summary
+                from django.core.serializers.json import DjangoJSONEncoder
+                self.stdout.write(json.dumps(monitor_summary(), ensure_ascii=False, cls=DjangoJSONEncoder))
+                return
             if op=='list':result=candidate_page(options['after_id'],options['limit'])
             else:
                 if not enabled():raise CommandError('AI 工单自动跟进尚未启用。')

@@ -94,6 +94,8 @@ npm --prefix frontend run dev
 
 基于 `22c3987` 复核反馈的跟进修复（业务键组合、日期草稿基线、新建页迟到响应、列表类型及版本查询）已上线，见 [跟进修复发布记录](docs/reviews/audit-followup-fixes/README.md)。
 
+本轮 AI 节点监控、附件累计容量和本机备份恢复改进已完成隔离验证，**尚待本轮发布确认**，范围和验证见 [运行保障改进审阅记录](docs/reviews/operations-resilience/README.md)。
+
 ## 通知规则与钉钉配置
 
 | 事件 | 站内提醒 | 同一钉钉协作群 |

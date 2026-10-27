@@ -67,6 +67,7 @@ export async function mountPage(
     routes: [
       { path: "/tickets/:id", component },
       { path: "/notifications", component },
+      { path: "/operations", component },
       { path: "/tickets", component: { render: () => null } },
     ],
   });

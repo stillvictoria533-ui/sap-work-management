@@ -1,0 +1,103 @@
+{
+  "status": "review_only_not_deployed",
+  "base_commit": "cb97df0fc72f7306febe747c9ad76258847dcf47",
+  "branch": "codex/operations-resilience",
+  "verified_at_local": "2026-10-27T14:49:15+08:00",
+  "production_impact": {
+    "deployed_this_round": false,
+    "pushed_this_round": false,
+    "real_sap_queries": false,
+    "model_calls": false,
+    "real_backup_restored": false,
+    "production_synthetic_qa_only": true
+  },
+  "attachment_aggregate_bytes": {
+    "files": 8,
+    "total": 741890,
+    "largest_ticket": 140215,
+    "largest_owner": 403636
+  },
+  "proposed_limits_bytes": {
+    "ticket": 268435456,
+    "owner": 1073741824,
+    "global": 2147483648,
+    "minimum_disk_free": 3221225472
+  },
+  "observed_backup_preflight": {
+    "media_bytes": 778754,
+    "database_bytes": 10507955,
+    "required_bytes": 1086157203,
+    "available_bytes": 50726871040,
+    "read_only": true
+  },
+  "postgresql_17_isolated": {
+    "tests": 204,
+    "skipped": 0,
+    "passed": true,
+    "includes_quota_concurrency": true,
+    "backend_source_files_sha256_matched": 82,
+    "restore_drill_sha256": "2e98e01dbf4c8c1783be8ba5a56e32d38ec2cbbc7d99208677021572fb3283e3"
+  },
+  "restore_drill_synthetic": {
+    "passed": true,
+    "tickets": 1,
+    "attachments": 1,
+    "expected_counts_match": true,
+    "login": true,
+    "attachment_download": true,
+    "isolated_network": true,
+    "temporary_resources_cleanup_verified": true,
+    "note": "QA used the same restore_drill.py and backend; ops.py was subsequently adjusted for backup-state reporting. Its restore-script imports remained unchanged and current host operations passed the local tests."
+  },
+  "latest_real_backup_read_only": {
+    "checksums_verified": true,
+    "database_header_verified": true,
+    "attachment_archive_read": true,
+    "archive_files": 8,
+    "count_baseline_available": false,
+    "restored": false
+  },
+  "local_tests": {
+    "django_sqlite": {
+      "tests": 204,
+      "passed": 201,
+      "skipped": 3,
+      "note": "PostgreSQL-only concurrency cases are covered by the isolated PostgreSQL run."
+    },
+    "operations_deployment_and_other_python": {
+      "tests": 81,
+      "passed": 79,
+      "skipped": 2,
+      "note": "Two optional installed-model CLI tests were not enabled; no real model call was made."
+    },
+    "frontend": {
+      "tests": 40,
+      "passed": 40
+    },
+    "connector_and_node_readiness": {
+      "tests": 7,
+      "passed": 7
+    },
+    "frontend_production_build": true,
+    "django_migration_check": "no_changes_detected"
+  },
+  "browser_synthetic": {
+    "admin_page": true,
+    "consultant_api_status": 403,
+    "consultant_route": "tickets",
+    "mobile_width": 390,
+    "mobile_document_width": 390
+  },
+  "existing_mac_readiness_read_only": {
+    "model_program_present": true,
+    "sap_tools_present": true,
+    "identity_format_valid": true,
+    "loopback_proxy_listening": true,
+    "not_a_model_or_sap_connection_test": true
+  },
+  "limitations": [
+    "No offsite backup destination is configured.",
+    "Real backup restore requires explicit administrator authorization under docs/OPERATIONS.md.",
+    "Live production and GitHub deployment validation remain pending approval."
+  ]
+}

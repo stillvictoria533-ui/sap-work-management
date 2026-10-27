@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from .errors import Conflict
 from .models import User, Ticket, Event, Attachment, Notification, Delivery, SYSTEMS
-from .uploads import validate_uploads
+from .uploads import validate_uploads, check_attachment_capacity
 from .identifiers import positive_id
 
 def scoped_tickets(user):
@@ -117,6 +117,7 @@ def create_ticket(user, data, files):
                     raise Conflict({'detail': f'此提交编号已创建 {existing.number}，本次内容未保存。请打开原工单，在时间线补充。',
                                     'ticket_id': str(existing.pk), 'code': 'submission_content_mismatch'})
                 return existing, False
+            check_attachment_capacity(user.pk, None, uploads)
             ticket = Ticket.objects.create(owner=user, submission_fingerprint=fingerprint, **data)
             item = event(ticket, user, 'created', body='提交了需求工单', to_status='pending')
             save_files(item, uploads, saved)
@@ -142,6 +143,7 @@ def reply_ticket(user, ticket_id, data, files):
                 raise ValidationError('回复不再变更状态，请刷新页面后使用独立的状态操作。')
             if ticket.status == 'done':
                 raise ValidationError('工单已完成，请先重新打开再回复。')
+            check_attachment_capacity(ticket.owner_id, ticket.pk, uploads)
             ticket.version += 1
             ticket.updated_at = timezone.now()
             ticket.save(update_fields=['version', 'updated_at'])

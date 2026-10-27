@@ -127,6 +127,23 @@ class TicketAIRun(models.Model):
         indexes = [models.Index(fields=['status', 'lease_expires_at'])]
 
 
+class TicketAIExecutorState(models.Model):
+    """Only bounded health metadata; never store credentials or ticket text."""
+    name = models.CharField(max_length=16, primary_key=True, default='primary', editable=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    last_scan_at = models.DateTimeField(null=True, blank=True)
+    capabilities = models.JSONField(default=dict)
+
+
+class UploadQuotaLock(models.Model):
+    """Serialize capacity checks and attachment writes across all API workers."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='one_upload_quota_lock')]
+
+
 class TicketAIQuery(models.Model):
     """A consumed, per-run query budget entry and executor-owned evidence receipt."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

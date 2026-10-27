@@ -106,6 +106,25 @@ export interface Delivery {
   created_at: string;
   accepted_at: string | null;
 }
+export interface OperationsHealth {
+  enabled: boolean;
+  node: {
+    status: "online" | "offline" | "awaiting" | "disabled";
+    last_seen_at: string | null;
+    last_scan_at: string | null;
+    capabilities: Record<"model_cli" | "sap_tools" | "production_identity" | "proxy", boolean | null>;
+  };
+  queue: { queued: number; running: number; retry_wait: number; manual_required: number;
+    waiting_for_information: number; needs_acceptance: number; inactive_submitters: number; oldest_wait_seconds: number | null };
+  failures: { consecutive: number; by_reason: Record<string, number>; last_failure_at: string | null };
+  last_reply_at: string | null;
+  alerts: { offline: boolean; readiness: boolean; backlog: boolean; failure_streak: boolean; manual: boolean };
+  thresholds: { heartbeat_seconds: number; backlog_seconds: number; failure_count: number };
+  storage: { count: number; used_bytes: number; largest_ticket_bytes: number; largest_owner_bytes: number;
+    free_bytes: number | null; limits: { ticket_bytes: number; owner_bytes: number; global_bytes: number; min_free_bytes: number } };
+  backup: { status: "healthy" | "running" | "failed" | "stale" | "unknown"; last_success_at: string | null;
+    last_drill_at: string | null; last_drill_ok: boolean | null; reported_at: string | null };
+}
 export const statuses: Record<string, string> = {
   pending: "待受理",
   "in-progress": "处理中",

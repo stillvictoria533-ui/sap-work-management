@@ -31,6 +31,7 @@ services:
     env_file: .env.production
     volumes:
       - media:/app/private-media
+      - ./ops-state/api-health:/app/ops-health:ro
     depends_on:
       db:
         condition: service_healthy

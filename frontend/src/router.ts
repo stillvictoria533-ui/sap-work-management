@@ -75,6 +75,11 @@ export const router = createRouter({
       component: () => import("./pages/Deliveries.vue"),
       meta: { admin: true },
     },
+    {
+      path: "/operations",
+      component: () => import("./pages/Operations.vue"),
+      meta: { admin: true },
+    },
     { path: "/:pathMatch(.*)*", redirect: "/" },
   ],
 });

@@ -9,6 +9,7 @@ backend/private-media
 frontend/dist
 design-v3
 backups
+ops-state
 .local-credentials.txt
 .local-ai-*
 deploy/certs

@@ -105,7 +105,12 @@ def dispatch(request):
             raise PolicyError('invalid_claim')
         return ai.claim(request['ticket_id'], request['version'])
     run_id, token = uuid.UUID(request['run_id']), uuid.UUID(request['lease_token'])
-    if operation == 'renew': return ai.renew(run_id, token)
+    if operation == 'renew':
+        result = ai.renew(run_id, token)
+        if result.get('outcome') == 'renewed':
+            from .ai_monitor import touch_worker_heartbeat
+            touch_worker_heartbeat()
+        return result
     if operation == 'reply': return ai.publish(run_id, token, request['payload'])
     if operation == 'defer': return ai.defer(run_id, token, request['reason'])
     if operation == 'query_reserve':

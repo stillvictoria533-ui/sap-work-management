@@ -37,7 +37,7 @@ jobs:
       - run: python backend/manage.py makemigrations --check --dry-run
       - run: npm --prefix frontend ci
       - name: Test legacy connector protocol
-        run: node --test connector/connector.test.mjs
+        run: node --test connector/connector.test.mjs scripts/ai_ticket_readiness.test.cjs
       - name: Test frontend
         run: npm --prefix frontend test
       - run: npm --prefix frontend run build
