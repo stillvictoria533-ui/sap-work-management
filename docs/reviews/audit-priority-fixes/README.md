@@ -1,6 +1,24 @@
-# 2026-10-27 优先级修复审阅（未发布）
+# 2026-10-27 优先级修复与发布记录
 
-基于“项目优化分析”审查版本 `91754db8a4bbdd8e5c9bbaf3e6b1f023dd4a48c5`，在独立分支 `codex/audit-priority-fixes` 修复。原目录的未提交日历、时间线、滚动布局等改动保持原样。本轮未修改生产数据、执行 SAP 查询、发送外部通知、部署或推送 GitHub。
+状态：用户明确确认本次最终修复后，网页与工单服务已于北京时间 **2026-10-27 11:59:49** 完成上线验证；同版 AI 运行包于 **12:02:11** 恢复原有 60 秒调度。上线代码提交 [`c1c654a`](https://github.com/stillvictoria533-ui/sap-work-management/commit/c1c654a151f3fd5a10fe9684816e5b4625d19012) 已推送至 GitHub `main` 并实时读回确认，扩展后的 [GitHub CI](https://github.com/stillvictoria533-ui/sap-work-management/actions/runs/40447528972) 已通过。发布记录和状态文档作为随后同步的文档提交，不改变已上线运行代码。
+
+本次基于“项目优化分析”审查版本 `91754db8a4bbdd8e5c9bbaf3e6b1f023dd4a48c5`，在独立分支 `codex/audit-priority-fixes` 修复。原目录的未提交日历、时间线、滚动布局等改动保持原样。生产业务记录保留，仅新增已确认的提交指纹列；上线冒烟使用的合成账号、工单、审计和会话写入全部回滚，未生成业务通知或额外 SAP 验收查询。机器证据见 [发布验证](deployment-verification.json)。
+
+## 上线验证
+
+| 检查 | 结果 |
+| --- | --- |
+| 发布前源码基线 | 服务器 103 份源码、本机旧 AI 包 11 份文件与审查基线一致 |
+| 数据与回退保障 | 数据库归档经 pg_restore 目录校验，附件归档完整读取，源码及旧镜像保留；备份路径见发布验证记录 |
+| PostgreSQL 回归 | 171/171 通过，0 跳过，包含真实密码行锁及九并发查询额度用例；临时测试角色、库及容器清理完毕 |
+| 数据库迁移 | `desk.0014_ticket_submission_fingerprint` 已应用 |
+| 运行代码与产物 | 132 份部署源码校验一致；API、通知 worker、聊天 worker 各 75 份后端文件一致；28 个 web 静态资源一致 |
+| 服务与外部 HTTPS | API、数据库、聊天 worker healthy；通知 worker、web 正常运行；健康接口、首页和匿名会话入口 200，本机独立 HTTPS 校验通过 |
+| 生产冒烟 | Unicode 搜索、非法 ID 返回 400、版本接口、流式 CSV、密码空格及当前会话、缺失工厂条件拒绝均通过；合成记录事务回滚 |
+| 本机 AI | 新包 11 份文件摘要一致，影子扫描 SHADOW_EMPTY，原 LaunchAgent 与 60 秒周期恢复，首次后台扫描 EMPTY、退出码 0；环境及固定身份保持原样 |
+| GitHub | `main` 已包含上线代码 `c1c654a`，实时读回确认；checks 成功 |
+
+第一次容器内测试缺少仓库根目录的 worker 脚本，两项用例因夹具目录布局报错；补齐同版脚本并只读挂载仓库后，完整 PostgreSQL 回归通过。此过程没有修改已确认的运行代码，也未在验证失败时切换生产。
 
 ## 已确认缺陷
 
@@ -34,7 +52,7 @@
 
 ## 验证
 
-最终自动化结果记录于同目录 `verification.json`。本地环境为 Python 3.14.3、Node 24.21.0、SQLite；真实 PostgreSQL 行锁测试由扩展后的 CI 执行。本轮没有把 SQLite 通过当作 PostgreSQL 并发验收，也没有连接真实 SAP/provider。
+发布前的本地自动化结果保留于同目录 `verification.json`：当时环境为 Python 3.14.3、Node 24.21.0、SQLite，267 项通过、4 项环境相关跳过。随后本次发布在服务器隔离 PostgreSQL 环境中实际执行 171 项、0 跳过，并完成生产冒烟；扩展后的 GitHub CI 也已通过。新增证据独立记录于 `deployment-verification.json`，不改写此前的本地验证历史。
 
 真实浏览器使用独立临时 SQLite 和两个模拟工单，AI、钉钉均关闭：
 

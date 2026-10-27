@@ -1,0 +1,154 @@
+{
+  "status": "published_and_synchronized",
+  "version": "audit-20261027-c1c654a",
+  "timezone": "Asia/Shanghai",
+  "approved_code_commit": "c1c654a151f3fd5a10fe9684816e5b4625d19012",
+  "application_verified_at_beijing": "2026-10-27 11:59:49",
+  "ai_runtime_activated_at_beijing": "2026-10-27 12:02:11",
+  "github": {
+    "branch": "main",
+    "application_commit": "c1c654a151f3fd5a10fe9684816e5b4625d19012",
+    "remote_application_commit_verified": "c1c654a151f3fd5a10fe9684816e5b4625d19012",
+    "workflow_run_id": 40447528972,
+    "workflow_status": "completed",
+    "workflow_conclusion": "success",
+    "workflow_url": "https://github.com/stillvictoria533-ui/sap-work-management/actions/runs/40447528972"
+  },
+  "server": {
+    "version": "audit-20261027-c1c654a",
+    "code_commit": "c1c654a151f3fd5a10fe9684816e5b4625d19012",
+    "started_at": "2026-10-27T03:58:39.426371+00:00",
+    "postgresql": {
+      "database": "postgresql",
+      "tests": 171,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "phase": "verified",
+    "backup": "/opt/sapdesk/backups/audit-20261027-c1c654a-20261027T035909Z",
+    "backup_sha256": {
+      "database.dump": "25f99734073e1ec8012dd296a9477fee2f5b91cf8c541e77cae8d550e3b25c02",
+      "attachments.tar.gz": "c1a34a0def76b55d8047c9958486901047a7fd48ca224f64eaa3502ffe6778a9",
+      "sources.tar.gz": "1f15ebe16dc01f9d140acc5975bf9bbd3c333a5514517c65873a2c642f96d7bd"
+    },
+    "migration_0014": true,
+    "containers": [
+      {
+        "Service": "api",
+        "State": "running",
+        "Health": "healthy"
+      },
+      {
+        "Service": "chat-worker",
+        "State": "running",
+        "Health": "healthy"
+      },
+      {
+        "Service": "db",
+        "State": "running",
+        "Health": "healthy"
+      },
+      {
+        "Service": "web",
+        "State": "running",
+        "Health": ""
+      },
+      {
+        "Service": "worker",
+        "State": "running",
+        "Health": ""
+      }
+    ],
+    "completed_at": "2026-10-27T03:59:49.394907+00:00",
+    "images": {
+      "api": "sha256:4b3310ff304d7b48ca69352eb705ec908ba49c1710c8edcc476ca1bf7cd67596",
+      "worker": "sha256:4b3310ff304d7b48ca69352eb705ec908ba49c1710c8edcc476ca1bf7cd67596",
+      "chat-worker": "sha256:488f9c7e906d52626792fa39f3e42e3ad218847b888c6f4077f5f1ff3e4e75e9",
+      "web": "sha256:dda6ad3bb66bd057a7e86dfb932150a900dfb613af4bbc355d51d2232f6bfcd5"
+    },
+    "source_files_checked": 132,
+    "image_backend_checks": {
+      "api": {
+        "checked": 75,
+        "mismatches": []
+      },
+      "worker": {
+        "checked": 75,
+        "mismatches": []
+      },
+      "chat-worker": {
+        "checked": 75,
+        "mismatches": []
+      }
+    },
+    "web_files_checked": 28,
+    "https_health": 200,
+    "https_index": 200,
+    "anonymous_session": 200,
+    "production_smoke": {
+      "unicode_search": 200,
+      "invalid_owner": 400,
+      "invalid_focus": 400,
+      "version_endpoint": 200,
+      "streaming_export": 200,
+      "password_spaces_and_session": 200,
+      "incomplete_scope_rejected": true,
+      "temporary_records_rolled_back": true,
+      "database": "postgresql"
+    },
+    "real_sap_queries_executed": false
+  },
+  "runtime": {
+    "activated_at": 1793073731.924756,
+    "runtime": "/Users/apple/Desktop/SAP工作管理平台/release/ai-ticket-runtime/audit-20261027-c1c654a",
+    "launchagent_loaded": true,
+    "start_interval": 60,
+    "environment_unchanged": true,
+    "shadow": "SHADOW_EMPTY",
+    "files_verified": 11,
+    "hash_sha256": {
+      "backend/desk/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "backend/desk/ai_policy.py": "32b395a6e79b82b2c465b3f1eb5858a7419682990d34d8e012b02e1afd6569aa",
+      "deploy/com.sapdesk.ai-ticket-dispatcher.plist.template": "8a02e5b71ca787e923d9f626a79245df98bf88522416b9b627a9c20e0164a052",
+      "docs/AI_TICKET_PLANNER_PROMPT.md": "56ce5203bcf9d3dda393f8a8aed4e51f042a736cf50716bdcf35667f8263bab0",
+      "scripts/ai_ticket_dispatch.py": "605a4beb893a8efa8df9dbd7ded2ba73ce52ac2be1131304e36828dbfa0d7b63",
+      "scripts/ai_ticket_model.py": "a9af1b42959bd0e821705b7632ad9aac39af8d8da08589562a64b153c426042d",
+      "scripts/ai_ticket_sap.mjs": "430e5d0b93e9e73f6bfff6cae5aa71163e29ff82d077804feb766153f788999b",
+      "scripts/ai_ticket_scan.cjs": "097fd48bd85ff59006788a93a98bb1a4af8af431ba377f56267831c83d6ebfba",
+      "scripts/ai_ticket_transport.cjs": "e73073c1056dfd41656f35d0fe2bce1b4e43427d0e0dae1261992d042a461892",
+      "scripts/ai_ticket_worker.py": "077f51bd6984dd67d655634cecd62568c409363114b88908b87cb8ceabcb51d0",
+      "scripts/render_ai_ticket_launchd.py": "4309b0dd089368b407fdcac59a9c4980306d162a1f0cb41a8c264cd6e3df4e89"
+    },
+    "last_scan": "EMPTY",
+    "last_error": null,
+    "last_exit_code": 0
+  },
+  "public_health_from_mac": {
+    "https_status": 200,
+    "response": "ok",
+    "certificate_verified": true
+  },
+  "validation_fixtures": {
+    "postgresql_test_database_removed": true,
+    "postgresql_test_role_removed": true,
+    "production_smoke_records_rolled_back": true,
+    "validation_notifications_sent": false
+  },
+  "preserved": {
+    "original_workspace_changes": true,
+    "production_business_data": true,
+    "old_images_and_private_backup": true,
+    "old_ai_runtime_disabled": true,
+    "existing_sap_ai_heartbeat_paused": true
+  },
+  "release_package": {
+    "bytes": 352527,
+    "sha256": "33a4a5f41ae8c1a226099f7daae92576ec76f045acaf2dd0c68698ecfebf60c8"
+  },
+  "ci_and_source_note": "GitHub CI passed for the exact deployed implementation commit. This record and release status documentation are synchronized afterward without changing runtime code.",
+  "limits": [
+    "No additional live SAP or model-provider acceptance queries were executed for this release.",
+    "AI node monitoring, cumulative attachment quotas, offsite backup and timeline cursor pagination remain follow-up work."
+  ],
+  "staging_note": "An initial container test attempt lacked repository-root worker scripts. The fixture was corrected with the same approved scripts mounted read-only; the subsequent full PostgreSQL run passed 171 tests with zero skips."
+}

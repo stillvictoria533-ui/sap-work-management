@@ -90,7 +90,7 @@ npm --prefix frontend run dev
 | `connector/`、`scripts/windows/` | 连接器试点及离线协议验证，未接入现行工单 AI 执行链路 |
 | `design-v3/` | 设计参考，不参与生产构建 |
 
-2026-10-27 优先级修复的范围、验证及发布注意事项见 [本地修复审阅](docs/reviews/audit-priority-fixes/README.md)。该记录明确区分已验证修复和后续容量、监控、灾备建议。
+2026-10-27 优先级修复已上线，范围、PostgreSQL 回归、生产冒烟及 GitHub 同步证据见 [修复与发布记录](docs/reviews/audit-priority-fixes/README.md)。该记录明确区分已验证修复和后续容量、监控、灾备建议。
 
 ## 通知规则与钉钉配置
 

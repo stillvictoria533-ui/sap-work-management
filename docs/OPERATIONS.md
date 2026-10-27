@@ -35,3 +35,5 @@
 4. 在本次发布记录和交付说明中记录上线内容、上线时间（北京时间）、验证结果、GitHub 分支、提交号及同步结果。若同步失败，明确报告“已上线，GitHub 同步未完成”及原因，后续补齐后再标记发布收尾完成。
 
 最近同步记录：[2026-10-27 已上线版本同步 GitHub](reviews/github-sync-20261027/README.md)。
+
+后续发布记录：[2026-10-27 优先级修复上线与 GitHub 同步](reviews/audit-priority-fixes/README.md)，上线代码 `c1c654a`，服务器隔离 PostgreSQL 171 项回归与生产冒烟通过。
