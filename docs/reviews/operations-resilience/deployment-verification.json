@@ -1,0 +1,91 @@
+{
+  "status": "production_verified_and_code_synchronized",
+  "timezone": "Asia/Shanghai",
+  "approved_code_commit": "62eb1fcf6a1e40ac101a8855530dfd8feb1c6b0e",
+  "server_verified_at_beijing": "2026-10-27T15:01:53+08:00",
+  "runtime_activated_at_beijing": "2026-10-27T15:03:10+08:00",
+  "github": {
+    "repository": "stillvictoria533-ui/sap-work-management",
+    "branch": "main",
+    "application_commit": "62eb1fcf6a1e40ac101a8855530dfd8feb1c6b0e",
+    "remote_commit_verified": true,
+    "workflow_url": "https://github.com/stillvictoria533-ui/sap-work-management/actions/runs/40464841170",
+    "workflow_status": "completed",
+    "workflow_conclusion": "success",
+    "workflow_run_id": 40464841170
+  },
+  "server": {
+    "migration": "desk.0015_operations_resilience",
+    "services": "healthy",
+    "https_health": "ok",
+    "predeployment_daily_backup": "20261027T065958Z",
+    "backup_counts_available": true,
+    "backup_attachment_files_verified": 8,
+    "source_and_old_image_backup": "release-62eb1fc-20261027T070039Z",
+    "source_files_updated": 29,
+    "candidate_image_backend_files_verified": {
+      "api": 82,
+      "chat_worker": 82
+    },
+    "candidate_web_files_verified": 30,
+    "smoke": {
+      "admin_api": 200,
+      "consultant_api": 403,
+      "anonymous_api": 403,
+      "quota_rejection": 413,
+      "text_only_submission": 201,
+      "backup_status": "healthy",
+      "synthetic_records_rolled_back": true
+    },
+    "attachment_limits_bytes": {
+      "ticket": 268435456,
+      "owner": 1073741824,
+      "global": 2147483648,
+      "disk_reserve": 3221225472
+    },
+    "timers_active": [
+      "sapdesk-backup.timer",
+      "sapdesk-monitor.timer"
+    ]
+  },
+  "runtime": {
+    "verified_files": 12,
+    "shadow": "SHADOW_EMPTY",
+    "loaded": true,
+    "scan_interval_seconds": 60,
+    "background_scan": "EMPTY",
+    "last_error": null,
+    "legacy_heartbeat": "PAUSED",
+    "capabilities": {
+      "model_cli": true,
+      "sap_tools": true,
+      "production_identity": true,
+      "proxy": true
+    }
+  },
+  "predeployment_tests": {
+    "postgresql": {
+      "tests": 204,
+      "skipped": 0
+    },
+    "frontend": {
+      "tests": 40,
+      "passed": 40
+    },
+    "operations_and_other_python": {
+      "tests": 81,
+      "skipped": 2
+    },
+    "connector_and_node": {
+      "tests": 7,
+      "passed": 7
+    },
+    "production_build": true
+  },
+  "limits": [
+    "No actual backup restore, real SAP query, or additional model call was performed during this release.",
+    "One item is reported by the aggregate monitor as requiring manual attention; its individual details were not inspected.",
+    "No offsite backup destination is configured.",
+    "Five pre-existing non-runtime server files with differing contents were preserved."
+  ]
+}

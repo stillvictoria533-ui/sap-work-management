@@ -94,7 +94,7 @@ npm --prefix frontend run dev
 
 基于 `22c3987` 复核反馈的跟进修复（业务键组合、日期草稿基线、新建页迟到响应、列表类型及版本查询）已上线，见 [跟进修复发布记录](docs/reviews/audit-followup-fixes/README.md)。
 
-本轮 AI 节点监控、附件累计容量和本机备份恢复改进已完成隔离验证，**尚待本轮发布确认**，范围和验证见 [运行保障改进审阅记录](docs/reviews/operations-resilience/README.md)。
+AI 节点监控、附件累计容量和本机备份恢复改进已于 2026-10-27 上线，范围及验证见 [运行保障发布记录](docs/reviews/operations-resilience/README.md)。
 
 ## 通知规则与钉钉配置
 
@@ -171,7 +171,7 @@ docker compose --env-file .env.production up -d
 
 `sh scripts/backup.sh` 会短暂停止 API/worker 以获取一致的数据库与附件快照，保存到 `backups/时间戳/`，写入校验和，随后启动 API/worker。未完成的备份目录以 `.incomplete` 结尾，不能用作有效备份。
 
-建议每日在维护时段运行、保留至少 7 个日备份和 4 个周备份，并加密复制到服务器之外；本项目不会擅自为你创建系统定时任务或删除备份。
+生产机已安装本机日备份与监控定时任务，备份保留与清理规则见 [运维文档](docs/OPERATIONS.md)；普通备份脚本不会自行安装定时器。具备条件后可另行配置独立存储副本。
 
 恢复先在隔离环境演练。以下操作会覆盖目标库，生产执行前需确认目标与备份：
 

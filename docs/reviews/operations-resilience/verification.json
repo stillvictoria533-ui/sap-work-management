@@ -1,5 +1,5 @@
 {
-  "status": "review_only_not_deployed",
+  "status": "predeployment_snapshot",
   "base_commit": "cb97df0fc72f7306febe747c9ad76258847dcf47",
   "branch": "codex/operations-resilience",
   "verified_at_local": "2026-10-27T14:49:15+08:00",
@@ -99,5 +99,6 @@
     "No offsite backup destination is configured.",
     "Real backup restore requires explicit administrator authorization under docs/OPERATIONS.md.",
     "Live production and GitHub deployment validation remain pending approval."
-  ]
+  ],
+  "scope": "Snapshot taken before the authorized deployment; see deployment-verification.json for the subsequent release."
 }
