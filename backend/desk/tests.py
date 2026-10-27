@@ -194,14 +194,85 @@ class ApplicationTests(TestCase):
         self.assertIn("'=HYPERLINK", full)
         self.assertTrue(Audit.objects.filter(action='export').exists())
 
-    def test_development_calendar_is_admin_only(self):
+    def test_development_calendar_requires_an_active_current_session(self):
         params = {'month': '2026-10'}
-        for client in [APIClient(), self.client, self.as_user(self.bob)]:
-            self.assertEqual(client.get('/api/calendar', params).status_code, 403)
-        self.assertEqual(self.as_user(self.admin).get('/api/calendar', params).status_code, 200)
-        self.admin.must_change_password = True
-        self.admin.save()
-        self.assertEqual(self.as_user(self.admin).get('/api/calendar', params).status_code, 403)
+        for mode in ['submitted', 'estimated']:
+            query = {**params, 'mode': mode}
+            self.assertEqual(APIClient().get('/api/calendar', query).status_code, 403)
+            for user in [self.admin, self.alice, self.bob]:
+                with self.subTest(mode=mode, role=user.role, user=user.pk):
+                    self.assertEqual(self.as_user(user).get('/api/calendar', query).status_code, 200)
+                    for field, value in [('must_change_password', True), ('is_active', False)]:
+                        previous = getattr(user, field)
+                        setattr(user, field, value)
+                        user.save()
+                        self.assertEqual(self.as_user(user).get('/api/calendar', query).status_code, 403)
+                        setattr(user, field, previous)
+                        user.save()
+                    client = self.as_user(user)
+                    user.session_version += 1
+                    user.save()
+                    self.assertEqual(client.get('/api/calendar', query).status_code, 403)
+
+    def test_consultant_calendar_scopes_rows_and_all_summaries_to_owner(self):
+        def add(owner, created, planned=None, **extra):
+            return Ticket.objects.create(owner=owner, title='日历权限测试', module='MM', kind='开发',
+                                         description='不公开的工单正文',
+                                         created_at=datetime.fromisoformat(created).replace(tzinfo=datetime_timezone.utc),
+                                         estimated_completion_date=planned, **extra)
+        mine = [add(self.alice, '2026-09-30T16:00:00', '2026-10-23'),
+                add(self.alice, '2026-10-01T01:00:00', '2026-10-23', status='done')]
+        add(self.alice, '2026-09-01T01:00:00')  # Own unassessed ticket outside this month.
+        add(self.bob, '2026-09-30T16:00:00', '2026-10-23', priority='urgent')
+        add(self.bob, '2026-10-02T01:00:00', '2026-10-24', priority='urgent')
+        add(self.bob, '2026-10-02T01:00:00')
+        for mode, selected, other_day, admin_count in [
+            ('submitted', '2026-10-01', '2026-10-02', 5),
+            ('estimated', '2026-10-23', '2026-10-24', 4),
+        ]:
+            with self.subTest(mode=mode):
+                params = {'month': '2026-10', 'mode': mode, 'date': selected}
+                # Changing query parameters cannot request another consultant's scope.
+                result = self.client.get('/api/calendar', {**params, 'owner': self.bob.pk, 'scope': 'all', 'role': 'admin'})
+                self.assertEqual(result.status_code, 200)
+                data = result.data
+                self.assertEqual((data['month_count'], data['count'], data['unassessed_count']), (2, 2, 1))
+                self.assertEqual(data['days'], [{'date': selected, 'count': 2, 'urgent_count': 0}])
+                self.assertEqual([row['id'] for row in data['results']], [ticket.pk for ticket in mine])
+                for row in data['results']:
+                    self.assertEqual(row['owner_id'], self.alice.pk)
+                    self.assertEqual(row['estimated_completion_date'], '2026-10-23')
+                    self.assertNotIn('description', row)
+                empty = self.client.get('/api/calendar', {**params, 'date': other_day}).data
+                self.assertEqual((empty['count'], empty['results']), (0, []))
+                bob = self.as_user(self.bob).get('/api/calendar', params).data
+                self.assertEqual(bob['count'], 1)
+                self.assertEqual(bob['unassessed_count'], 1)
+                self.assertEqual(bob['results'][0]['owner_id'], self.bob.pk)
+                admin = self.as_user(self.admin).get('/api/calendar', params).data
+                self.assertEqual((admin['month_count'], admin['count'], admin['unassessed_count']), (admin_count, 3, 2))
+
+    def test_consultant_calendar_pagination_and_empty_scope_do_not_leak_others(self):
+        created = datetime(2026, 10, 12, 3, tzinfo=datetime_timezone.utc)
+        Ticket.objects.bulk_create([Ticket(owner=self.alice, title=f'我的工单 {i}', module='SD', kind='开发',
+                                          description='背景', created_at=created, estimated_completion_date='2026-11-10') for i in range(21)])
+        Ticket.objects.bulk_create([Ticket(owner=self.bob, title=f'其他顾问工单 {i}', module='SD', kind='开发',
+                                          description='其他人的正文', created_at=created, priority='urgent',
+                                          estimated_completion_date='2026-11-10') for i in range(3)])
+        for mode, selected in [('submitted', '2026-10-12'), ('estimated', '2026-11-10')]:
+            with self.subTest(mode=mode):
+                params = {'mode': mode, 'month': selected[:7], 'date': selected}
+                first = self.client.get('/api/calendar', params).data
+                second = self.client.get('/api/calendar', {**params, 'page': 2}).data
+                self.assertEqual((first['count'], first['month_count']), (21, 21))
+                self.assertEqual((len(first['results']), len(second['results'])), (20, 1))
+                self.assertEqual(first['days'], [{'date': selected, 'count': 21, 'urgent_count': 0}])
+                self.assertEqual(second['month_count'], 21)
+                for row in first['results'] + second['results']:
+                    self.assertEqual(row['owner_id'], self.alice.pk)
+                empty = self.as_user(self.make_user('empty-' + mode)).get('/api/calendar', params).data
+                self.assertEqual((empty['count'], empty['month_count'], empty['unassessed_count']), (0, 0, 0))
+                self.assertEqual((empty['days'], empty['results']), ([], []))
 
     def test_calendar_uses_submission_date_and_shanghai_month_boundaries(self):
         def add(created, **extra):

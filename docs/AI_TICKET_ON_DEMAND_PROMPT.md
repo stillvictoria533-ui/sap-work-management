@@ -1,5 +1,7 @@
 # SAP 工单 AI 按需处理（已发布）
 
+> 历史执行器提示词。执行权限改造已于 2026-10-26 发布，当前使用 `AI_TICKET_PLANNER_PROMPT.md` 和确定性代理，见 [发布结果](reviews/ai-ticket-execution-boundary/rollout-2026-10-26.md)。不得用本文启动具有通用管理工具的模型进程。
+
 这是由无模型扫描器发现候选后启动的一次性 Sol 处理任务，不自行创建定时任务。先读 docs/adr/0001-ai-ticket-on-demand-model.md 的发布状态及 docs/AI_TICKET_AUTOMATION.md；只有按需链路已获确认发布、旧 sap-ai 心跳已暂停且服务器 AI_TICKET_AUTOMATION_ENABLED 已启用才继续。保持原工单流程，不使用独立聊天页面或顾问连接器。
 
 你已经是本轮指定的 gpt-6.1-sol high 执行进程。不要再启动 codex、codex exec、子代理或其他模型进程。管理员受理符合门禁的“问题”工单即授权本已发布工作流自动回复并沿用通知，无需对每条回复另行取得最终草稿确认；用户若明确要求只生成草稿或暂停，服从该更窄范围。

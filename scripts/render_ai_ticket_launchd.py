@@ -3,6 +3,7 @@ import argparse
 import os
 from pathlib import Path
 import plistlib
+import re
 import shutil
 from urllib.parse import urlsplit
 from xml.sax.saxutils import escape
@@ -11,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = ROOT / 'deploy/com.sapdesk.ai-ticket-dispatcher.plist.template'
 
 
-def render(mode):
+def render(mode, sap_workspace=None, ps4_user=None):
     python = shutil.which('python3')
     node = shutil.which('node')
     codex = Path.home() / '.codex/runtime/codex-cli-0.162.1/node_modules/.bin/codex'
@@ -29,12 +30,27 @@ def render(mode):
             raise RuntimeError('只允许写入无账号的本机代理地址。')
         proxy_entries.append(f'<key>{name}</key><string>{escape(value)}</string>')
     proxy_entries.append('<key>no_proxy</key><string>localhost,127.0.0.1,::1</string>')
+    sap_entries = []
+    workspace = sap_workspace or os.environ.get('AI_TICKET_SAP_WORKSPACE')
+    user = ps4_user or os.environ.get('AI_TICKET_PS4_APPROVED_USER')
+    if mode == 'run' and (not workspace or not user):
+        raise RuntimeError('运行模式必须明确配置公司 SAP 工作区及与 root profile 一致的 PS4 固定账号。')
+    if workspace:
+        root = Path(workspace).resolve(strict=True)
+        for relative in ['SAP 万能工具箱/scripts/sap-eyes/cli.mjs', 'SAP 万能工具箱/scripts/sap-eyes/policy.mjs',
+                'local-sap-security/local-approval-signer.mjs', 'local-sap-security/signed-approval.mjs']:
+            if not (root / relative).is_file(): raise RuntimeError('公司 SAP 只读工具或签名器缺失。')
+        sap_entries.append('<key>AI_TICKET_SAP_WORKSPACE</key><string>' + escape(str(root)) + '</string>')
+    if user:
+        if not re.fullmatch(r'[A-Z0-9_-]{2,32}', user): raise RuntimeError('PS4 固定账号格式无效。')
+        sap_entries.append('<key>AI_TICKET_PS4_APPROVED_USER</key><string>' + escape(user) + '</string>')
     values = {
         '@PYTHON@': escape(python),
         '@PROJECT@': escape(str(ROOT)),
         '@NODE_DIR@': escape(str(Path(node).parent)),
         '@MODE@': '--' + mode,
         '@PROXY_ENV@': '\n    '.join(proxy_entries),
+        '@SAP_ENV@': '\n    '.join(sap_entries),
     }
     content = TEMPLATE.read_text()
     for token, value in values.items():
@@ -47,9 +63,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=['shadow', 'run'], default='shadow')
     parser.add_argument('--output', type=Path, default=ROOT / 'release/ai-ticket-dispatcher.preview.plist')
+    parser.add_argument('--sap-workspace', type=Path)
+    parser.add_argument('--ps4-user')
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render(args.mode))
+    args.output.write_text(render(args.mode, args.sap_workspace, args.ps4_user))
     print(args.output)
 
 

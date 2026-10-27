@@ -607,6 +607,40 @@ textarea:focus-visible {
 #sap-desk-design #sd-workspace .sd-main {
   background-image: none;
 }
+/* Desktop workspace panels scroll independently; mobile keeps page scrolling. */
+@media (min-width: 651px) {
+  #sap-desk-design #sd-workspace {
+    height: calc(100dvh - 40px);
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  #sap-desk-design #sd-workspace .sd-main {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  #sap-desk-design #sd-workspace .sd-sidebar {
+    min-height: 0;
+  }
+  #sap-desk-design #sd-workspace .sd-sidebar > :not(.sd-nav) {
+    flex-shrink: 0;
+  }
+  #sap-desk-design #sd-workspace .sd-nav {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Leave room for keyboard focus outlines inside the scroll area. */
+    padding: 6px;
+    margin: 43px -6px 0;
+  }
+  #sap-desk-design #sd-workspace .sd-nav > * {
+    flex-shrink: 0;
+  }
+  #sap-desk-design #sd-workspace .sd-sidebar-bottom {
+    padding-top: 20px;
+  }
+}
 #sap-desk-design #sd-workspace .sd-focus-strip,
 #sap-desk-design #sd-workspace .sd-eyebrow,
 #sap-desk-design #sd-workspace .sd-subtitle {
@@ -892,6 +926,12 @@ textarea:focus-visible {
 @media (max-width: 680px) {
   #sap-desk-design .sd-stage-copy-panel[data-stage-copy="2"] h2 br {
     display: initial;
+  }
+}
+@media (min-width: 651px) and (max-width: 680px) {
+  #sap-desk-design #sd-workspace {
+    height: calc(100dvh - 20px);
+    min-height: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {

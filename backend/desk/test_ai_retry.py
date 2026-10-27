@@ -9,6 +9,7 @@ from .ai import candidate_page, claim, publish, request_retry, renew
 from .models import Audit, Delivery, Notification, TicketAIRun
 from .services import create_ticket, reply_ticket, change_ticket_status
 from .models import User
+from .ai_test_support import receipt_payload
 
 
 @override_settings(AI_TICKET_AUTOMATION_ENABLED=True, DINGTALK_ENABLED=False,
@@ -17,7 +18,7 @@ class ExplicitRetryTests(TestCase):
     def setUp(self):
         self.admin=User.objects.create_user(username='retry-admin',email='admin@retry.test',name='admin',role='admin')
         self.owner=User.objects.create_user(username='retry-owner',email='owner@retry.test',name='owner',role='consultant')
-        self.ticket=create_ticket(self.owner,{'request_key':uuid.uuid4(),'title':'本地测试',
+        self.ticket=create_ticket(self.owner,{'request_key':uuid.uuid4(),'title':'MARA 本地测试',
             'system':'PS4','kind':'问题','module':'MM','description':'本地夹具，禁止真实 SAP 查询'},[])[0]
         self.ticket=change_ticket_status(self.admin,self.ticket.pk,{'version':self.ticket.version,'action':'start'})
         first=claim(self.ticket.pk,self.ticket.version)
@@ -34,8 +35,7 @@ class ExplicitRetryTests(TestCase):
         return claim(self.ticket.pk,self.ticket.version)
 
     def reply(self,lease):
-        return publish(lease['run_id'],lease['lease_token'],{'category':'query','body':'本地测试回答',
-            'evidence':[{'system':'PS4','client':'100','reference':'仅本地夹具，无真实 SAP 数据'}]})
+        return publish(lease['run_id'],lease['lease_token'],receipt_payload(lease, '本地测试回答'))
 
     def add(self,actor):
         self.ticket.refresh_from_db()

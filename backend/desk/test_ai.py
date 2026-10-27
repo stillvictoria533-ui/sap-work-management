@@ -12,6 +12,7 @@ from rest_framework.test import APIClient
 from .models import User,Ticket,Event,TicketAIRun,Audit,Delivery,Notification
 from .services import create_ticket,reply_ticket,change_ticket_status
 from .ai import candidate_page,claim,publish,defer,renew,ticket_ai_state,ticket_context
+from .ai_test_support import receipt_payload
 
 
 @override_settings(AI_TICKET_AUTOMATION_ENABLED=True,DINGTALK_ENABLED=False,
@@ -25,7 +26,7 @@ class TicketAIFollowupTests(TestCase):
             role=role,password='Test-password-only!',must_change_password=False)
 
     def ticket(self, kind='问题'):
-        return create_ticket(self.consultant,{'request_key':uuid.uuid4(),'title':'只读排查测试','module':'MM',
+        return create_ticket(self.consultant,{'request_key':uuid.uuid4(),'title':'MARA 只读排查测试','module':'MM',
             'system':'DS4','kind':kind,'description':'本地测试数据，不需要查询真实 SAP。'},[])[0]
 
     def accept(self,t):
@@ -43,7 +44,7 @@ class TicketAIFollowupTests(TestCase):
             {'system':'DS4','client':'110','reference':'仅测试夹具，非真实 SAP 查询'}]}
 
     def send(self,r,p=None):
-        return publish(r['run_id'],r['lease_token'],p or self.payload())
+        return publish(r['run_id'],r['lease_token'],p if p is not None else receipt_payload(r))
 
     def test_no_analysis_before_admin_acceptance_or_direct_status_forgery(self):
         t=self.ticket();self.add(t,self.consultant)

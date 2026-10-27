@@ -21,7 +21,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LANGUAGE_CODE = 'zh-hans'
 TIME_ZONE = 'Asia/Shanghai'
 USE_TZ = True
-DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': os.getenv('SQLITE_PATH', str(BASE_DIR / 'dev.sqlite3')), 'OPTIONS': {'timeout': 20, 'transaction_mode': 'IMMEDIATE'}}}
+DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': os.getenv('SQLITE_PATH', str(BASE_DIR / 'dev.sqlite3')), 'OPTIONS': {'timeout': 20}}}
 if os.getenv('POSTGRES_HOST'):
     DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql', 'HOST': os.environ['POSTGRES_HOST'], 'PORT': os.getenv('POSTGRES_PORT', '5432'), 'NAME': os.getenv('POSTGRES_DB', 'sapdesk'), 'USER': os.getenv('POSTGRES_USER', 'sapdesk'), 'PASSWORD': os.environ['POSTGRES_PASSWORD'], 'CONN_MAX_AGE': 60}}
 elif not DEBUG and os.getenv('ALLOW_SQLITE', 'false') != 'true':
@@ -70,6 +70,6 @@ OPENAI_MODEL = os.getenv('OPENAI_MODEL', '').strip()
 AI_MAX_OUTPUT_TOKENS = 4000
 AI_MAX_TURN_SECONDS = 150
 AI_TURNS_PER_DAY = 100
-SAP_CONNECTOR_ENABLED = os.getenv('SAP_CONNECTOR_ENABLED', 'false').lower() == 'true'
-AI_TICKET_AUTOMATION_ENABLED = os.getenv('AI_TICKET_AUTOMATION_ENABLED', 'false').lower() == 'true'
 LOGGING = {'version': 1, 'disable_existing_loggers': False, 'handlers': {'console': {'class': 'logging.StreamHandler'}}, 'root': {'handlers': ['console'], 'level': 'INFO'}}
+
+AI_TICKET_AUTOMATION_ENABLED = os.getenv('AI_TICKET_AUTOMATION_ENABLED', 'false').lower() == 'true'

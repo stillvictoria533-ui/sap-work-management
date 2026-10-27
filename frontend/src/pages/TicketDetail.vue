@@ -283,13 +283,6 @@ async function getFile(f: Attachment) {
     <section class="sd-workflow" aria-label="工单流程">
       <p class="sd-small sd-muted">待受理 → 处理中 → 待验收 → 已完成</p>
       <p class="sd-workflow-next">{{ nextStep }}</p>
-      <p
-        v-if="ticket.ai_followup?.enabled"
-        class="sd-small sd-muted"
-        role="status"
-      >
-        AI 跟进 · {{ ticket.ai_followup.message }}
-      </p>
       <div class="sd-flex" v-if="actions.length">
         <button
           v-for="action in actions"

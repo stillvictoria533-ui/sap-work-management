@@ -19,9 +19,6 @@ import {
 } from "../chat";
 import Icon from "../components/Icon.vue";
 import ChatMessage from "../components/ChatMessage.vue";
-import LocalConnector from "../components/LocalConnector.vue";
-const connectorEnabled = ref(false);
-const attachedQuery = ref<{ id: string; label: string } | null>(null);
 
 const route = useRoute(),
   router = useRouter();
@@ -92,7 +89,6 @@ let pending: {
   createKey: string;
   system: string;
   ticket: number | null;
-  query: string | null;
 } | null = null;
 const drafts = new Map<string, string>();
 
@@ -214,7 +210,6 @@ watch(
       drafts.set(String(previous || "new"), draft.value);
     draft.value = drafts.get(String(value || "new")) || "";
     historyOpen.value = false;
-    if (!sending.value) attachedQuery.value = null;
     if (value) {
       if (current.value?.id !== value) {
         current.value = null;
@@ -266,8 +261,7 @@ async function send() {
   if (
     !pending ||
     pending.text !== text ||
-    pending.conversation !== (current.value?.id || null) ||
-    pending.query !== (attachedQuery.value?.id || null)
+    pending.conversation !== (current.value?.id || null)
   ) {
     pending = {
       key: crypto.randomUUID(),
@@ -276,7 +270,6 @@ async function send() {
       conversation: current.value?.id || null,
       system: system.value,
       ticket: linkedTicket.value?.id || null,
-      query: attachedQuery.value?.id || null,
     };
   }
   try {
@@ -293,7 +286,6 @@ async function send() {
     const value = await post<ChatTurn>(`/assistant/conversations/${id}/turns`, {
       request_key: pending.key,
       message: text,
-      sap_query_id: pending.query,
     });
     if (closed || current.value?.id !== id) return;
     updateTurn(value);
@@ -303,7 +295,6 @@ async function send() {
     drafts.delete("new");
     drafts.delete(id);
     pending = null;
-    attachedQuery.value = null;
     followTurn();
     void loadHistory();
     await scrollBottom(true);
@@ -316,7 +307,6 @@ async function send() {
 }
 async function newChat() {
   if (sending.value) return;
-  attachedQuery.value = null;
   if (!route.params.id) {
     draft.value = "";
     linkedTicket.value = null;
@@ -468,11 +458,7 @@ function selectTicket(ticket: Ticket) {
             <p>分析问题，梳理思路，让每一步都有依据。</p>
           </div>
         </div>
-        <span class="ai-connection"
-          ><Icon name="shield-check" />{{
-            connectorEnabled ? "本机查询 · DS4 试用" : "SAP 未接通"
-          }}</span
-        >
+        <span class="ai-connection"><Icon name="unplug" />SAP 未接通</span>
       </header>
       <div class="ai-toolbar">
         <label class="ai-system-label"
@@ -486,9 +472,7 @@ function selectTicket(ticket: Ticket) {
             <option value="QS4">QS4 / 120 · 测试</option>
           </select></label
         ><span class="ai-readonly"
-          ><Icon name="shield-check" />{{
-            connectorEnabled ? "只读查询 · 不修改 SAP" : "仅分析，不执行"
-          }}</span
+          ><Icon name="shield-check" />仅分析，不执行</span
         ><button
           v-if="!current && !linkedTicket"
           class="sd-quiet ai-link"
@@ -505,11 +489,6 @@ function selectTicket(ticket: Ticket) {
           <Icon name="refresh-cw" />刷新对话
         </button>
       </div>
-      <LocalConnector
-        :system="system"
-        @available="connectorEnabled = $event"
-        @attach="attachedQuery = $event"
-      />
       <div v-if="linkedTicket" class="ai-ticket-context">
         <Icon name="link" /><RouterLink :to="'/tickets/' + linkedTicket.id"
           >{{ linkedTicket.number }} · {{ linkedTicket.title }}</RouterLink
@@ -544,11 +523,8 @@ function selectTicket(ticket: Ticket) {
           <div class="ai-welcome-mark"><Icon name="sparkles" /></div>
           <h2>今天想解决什么 SAP 问题？</h2>
           <p>
-            描述业务现象，或粘贴代码与错误日志。<br />{{
-              connectorEnabled
-                ? "可通过本机 DS4 连接器取得只读证据，再附到提问中分析。"
-                : "SAP 尚未接通，我会基于你提供的材料分析。"
-            }}
+            描述业务现象，或粘贴代码与错误日志。<br />SAP
+            尚未接通，我会基于你提供的材料分析。
           </p>
           <div class="ai-suggestions">
             <button
@@ -582,12 +558,6 @@ function selectTicket(ticket: Ticket) {
                 >{{ status?.provider.name || "AI" }}</span
               >
             </div>
-            <p v-if="turn.context_meta.sap_evidence" class="ai-context-note">
-              依据 DS4 本机查询快照：{{
-                turn.context_meta.sap_evidence.object
-              }}
-              · {{ dateTime(turn.context_meta.sap_evidence.collected_at) }}
-            </p>
             <ChatMessage v-if="turn.output_text" :text="turn.output_text" />
             <div v-if="isActiveTurn(turn)" class="ai-progress" role="status">
               <span class="ai-pulse"></span
@@ -625,16 +595,10 @@ function selectTicket(ticket: Ticket) {
               >
                 <Icon name="refresh-cw" />重试</button
               ><span v-if="turn.status === 'completed'" class="ai-source"
-                >依据{{
-                  turn.context_meta.sap_evidence
-                    ? "本机查询快照与聊天材料"
-                    : "聊天材料"
-                }}{{ turn.context_meta.ticket ? "与关联工单" : ""
-                }}{{
-                  turn.context_meta.sap_evidence
-                    ? " · 只读快照"
-                    : " · 未查询 SAP"
-                }}</span
+                >依据聊天材料{{
+                  turn.context_meta.ticket ? "与关联工单" : ""
+                }}
+                · 未查询 SAP</span
               >
             </div>
             <p
@@ -649,19 +613,6 @@ function selectTicket(ticket: Ticket) {
       <p v-if="streamHint" class="ai-stream-hint" role="status">
         {{ streamHint }}
       </p>
-      <div v-if="attachedQuery" class="ai-ticket-context">
-        <Icon name="file-text" /><span
-          >下次提问附带：{{ attachedQuery.label }}</span
-        >
-        <button
-          class="sd-quiet"
-          aria-label="移除查询证据"
-          :disabled="sending"
-          @click="attachedQuery = null"
-        >
-          <Icon name="x" />
-        </button>
-      </div>
       <form class="ai-composer" @submit.prevent="send">
         <label class="ai-input-label" for="ai-message">向 SAP AI 助手提问</label
         ><textarea
@@ -708,12 +659,7 @@ function selectTicket(ticket: Ticket) {
           status?.provider.ready
             ? status.provider.name + " 已就绪"
             : "AI 服务待就绪"
-        }}<span>·</span
-        >{{
-          connectorEnabled
-            ? "仅分析主动附加的查询快照，注意采集时间。"
-            : "SAP 未接通，回答不代表系统实时结果。"
-        }}
+        }}<span>·</span>SAP 未接通，回答不代表系统实时结果。
       </footer>
     </section>
     <dialog ref="ticketDialog" class="ai-ticket-dialog">

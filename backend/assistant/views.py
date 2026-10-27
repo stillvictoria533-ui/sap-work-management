@@ -31,7 +31,6 @@ class ConversationInput(serializers.Serializer):
 class QuestionInput(serializers.Serializer):
     request_key = serializers.UUIDField()
     message = serializers.CharField(max_length=12000, trim_whitespace=True)
-    sap_query_id = serializers.UUIDField(required=False, allow_null=True)
 
 
 class RetryInput(serializers.Serializer):

@@ -39,7 +39,6 @@ class Turn(models.Model):
     worker_token = models.UUIDField(null=True)
     usage = models.JSONField(default=dict)
     context_meta = models.JSONField(default=dict)
-    sap_query = models.ForeignKey('SapQuery', null=True, blank=True, on_delete=models.PROTECT)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
     started_at = models.DateTimeField(null=True)
@@ -62,47 +61,3 @@ class WorkerState(models.Model):
     provider_code = models.CharField(max_length=40, default='not_configured')
     provider_name = models.CharField(max_length=40, default='AI 服务')
     provider_model = models.CharField(max_length=100, blank=True)
-
-
-class ConnectorDevice(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    name = models.CharField(max_length=60)
-    adapter = models.CharField(max_length=24, default='sap-eyes-mac')
-    token_hash = models.CharField(max_length=64, unique=True)
-    session_version = models.PositiveIntegerField()
-    created_at = models.DateTimeField(default=timezone.now)
-    expires_at = models.DateTimeField()
-    revoked_at = models.DateTimeField(null=True)
-    last_seen_at = models.DateTimeField(default=timezone.now)
-    last_success_at = models.DateTimeField(null=True)
-
-
-class ConnectorPairing(models.Model):
-    code_hash = models.CharField(primary_key=True, max_length=64)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    session_version = models.PositiveIntegerField()
-    expires_at = models.DateTimeField()
-    consumed_at = models.DateTimeField(null=True)
-
-
-class SapQuery(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    device = models.ForeignKey(ConnectorDevice, on_delete=models.PROTECT)
-    request_key = models.UUIDField()
-    operation = models.CharField(max_length=12)
-    object_name = models.CharField(max_length=40)
-    status = models.CharField(max_length=16, default='queued')
-    lease_hash = models.CharField(max_length=64, blank=True)
-    result = models.JSONField(default=dict)
-    error_code = models.CharField(max_length=40, blank=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    expires_at = models.DateTimeField()
-    finished_at = models.DateTimeField(null=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['owner', 'request_key'], name='unique_sap_query_request'),
-            models.UniqueConstraint(fields=['device'], condition=models.Q(status__in=['queued', 'running']), name='one_active_device_query'),
-        ]

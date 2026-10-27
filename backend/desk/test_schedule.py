@@ -195,7 +195,32 @@ class ScheduleTests(TestCase):
         second = self.client.get('/api/calendar', {'mode': 'estimated', 'month': '2026-11', 'date': '2026-11-01', 'page': 2})
         self.assertEqual(len(second.data['results']), 3)
         self.assertEqual(self.client.get('/api/calendar', {'mode': 'wrong'}).status_code, 400)
-        self.assertEqual(self.login(self.owner).get('/api/calendar', {'mode': 'estimated'}).status_code, 403)
+        self.assertEqual(self.login(self.owner).get('/api/calendar', {'mode': 'estimated'}).status_code, 200)
+
+    def test_consultant_calendar_reflects_admin_schedule_changes_and_remains_read_only(self):
+        consultant = self.login(self.owner)
+        def on_day(day):
+            response = consultant.get('/api/calendar', {'mode': 'estimated', 'month': day.strftime('%Y-%m'), 'date': day.isoformat()})
+            self.assertEqual(response.status_code, 200)
+            return response.data
+        self.assertEqual(self.save(self.future).status_code, 200)
+        initial = on_day(self.future)
+        self.assertEqual([row['id'] for row in initial['results']], [self.ticket.pk])
+        self.assertEqual(initial['results'][0]['estimated_completion_date'], self.future.isoformat())
+        later = self.future + timedelta(days=3)
+        self.assertEqual(self.save(later, '管理员调整计划').status_code, 200)
+        self.assertEqual(on_day(self.future)['count'], 0)
+        self.assertEqual(on_day(later)['results'][0]['estimated_completion_date'], later.isoformat())
+        self.ticket.refresh_from_db()
+        self.assertEqual(consultant.post(f'/api/tickets/{self.ticket.pk}/schedule', {
+            'version': self.ticket.version, 'estimated_completion_date': self.future.isoformat(),
+        }, format='json').status_code, 403)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.estimated_completion_date, later)
+        self.assertEqual(self.save(None, '重新评估').status_code, 200)
+        cleared = on_day(later)
+        self.assertEqual(cleared['count'], 0)
+        self.assertEqual(cleared['unassessed_count'], 1)
 
     def test_csv_uses_same_filter_and_keeps_both_dates_and_schedule_history(self):
         self.ticket.due_date = self.future-timedelta(days=1)

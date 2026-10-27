@@ -17,6 +17,21 @@ SPEC.loader.exec_module(dispatch)
 
 
 class DispatchTests(unittest.TestCase):
+    def setUp(self):
+        marker = patch.object(dispatch, 'EXECUTION_FLAG', SCRIPT)
+        marker.start()
+        self.addCleanup(marker.stop)
+
+    def test_new_boundary_requires_its_own_release_confirmation_marker(self):
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(dispatch, 'RUN_FLAG', SCRIPT), \
+                patch.object(dispatch, 'EXECUTION_FLAG', Path(folder) / 'missing'), \
+                patch.object(dispatch, 'heartbeat_paused', return_value=True), \
+                patch.object(dispatch, 'scan_queue') as scanner:
+            with self.assertRaisesRegex(RuntimeError, 'BOUNDARY_NOT_PUBLISHED'):
+                dispatch.run_once('run', '/usr/bin/true', '/usr/bin/true')
+            scanner.assert_not_called()
+
     def test_empty_queue_never_starts_a_model(self):
         with patch.object(dispatch, 'heartbeat_paused', return_value=True), \
              patch.object(dispatch, 'RUN_FLAG', SCRIPT), \
@@ -84,7 +99,7 @@ class DispatchTests(unittest.TestCase):
             self.assertEqual(output.getvalue().strip(), 'ALREADY_RUNNING')
             run.assert_not_called()
 
-    def test_worker_uses_scoped_mcp_and_supported_sol_model(self):
+    def test_dispatcher_launches_only_the_trusted_coordinator(self):
         class FakeProcess:
             returncode = 0
             def communicate(self, prompt, timeout):
@@ -93,17 +108,15 @@ class DispatchTests(unittest.TestCase):
             def poll(self):
                 return self.returncode
 
-        with tempfile.TemporaryDirectory() as folder, \
-             patch.object(dispatch, 'PROMPT_FILE', Path(folder) / 'prompt.md'), \
-             patch.object(dispatch.subprocess, 'Popen', return_value=FakeProcess()) as spawn:
-            dispatch.PROMPT_FILE.write_text('test prompt')
+        with patch.object(dispatch.subprocess, 'Popen', return_value=FakeProcess()) as spawn:
             self.assertEqual(dispatch.launch_worker('/path/to/codex'), 'OK')
             args = spawn.call_args.args[0]
-            self.assertEqual(args[args.index('-m') + 1], 'gpt-6.1-sol')
-            self.assertIn('--ignore-user-config', args)
-            self.assertIn('--approve-for-me', args)
+            self.assertEqual(args[0], sys.executable)
+            self.assertEqual(args[1], str(dispatch.WORKER_SCRIPT))
+            self.assertEqual(args[args.index('--codex') + 1], '/path/to/codex')
+            self.assertNotIn('--approve-for-me', args)
             self.assertNotIn('--dangerously-bypass-approvals-and-sandbox', args)
-            self.assertEqual(sum('mcp_servers.' in item for item in args), 4)
+            self.assertFalse(any('mcp_servers.' in item for item in args))
 
     def test_worker_timeout_stops_its_process_group(self):
         class SlowProcess:
@@ -116,11 +129,8 @@ class DispatchTests(unittest.TestCase):
             def wait(self, timeout=None):
                 self.returncode = 143
 
-        with tempfile.TemporaryDirectory() as folder, \
-             patch.object(dispatch, 'PROMPT_FILE', Path(folder) / 'prompt.md'), \
-             patch.object(dispatch.subprocess, 'Popen', return_value=SlowProcess()), \
+        with patch.object(dispatch.subprocess, 'Popen', return_value=SlowProcess()), \
              patch.object(dispatch.os, 'killpg') as stop:
-            dispatch.PROMPT_FILE.write_text('test prompt')
             self.assertEqual(dispatch.launch_worker('/path/to/codex'), 'TIMEOUT')
             stop.assert_called_once_with(12345, dispatch.signal.SIGTERM)
 

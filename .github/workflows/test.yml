@@ -32,8 +32,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: pip install -r backend/requirements.txt
       - run: python -m unittest discover -s tests -p 'test_deployment.py'
-      - name: Test AI ticket dispatcher
-        run: python -m unittest discover -s tests -p 'test_ai_ticket_dispatch.py'
+      - name: Test AI ticket dispatcher and execution boundary
+        run: python -m unittest discover -s tests -p 'test_ai_ticket*.py'
       - run: python backend/manage.py test desk
       - run: python backend/manage.py makemigrations --check --dry-run
       - run: npm --prefix frontend ci

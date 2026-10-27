@@ -14,6 +14,7 @@
   <dict>
     <key>PATH</key><string>@NODE_DIR@:/usr/local/bin:/usr/bin:/bin</string>
     @PROXY_ENV@
+    @SAP_ENV@
   </dict>
   <key>RunAtLoad</key><true/>
   <key>StartInterval</key><integer>60</integer>

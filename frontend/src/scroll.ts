@@ -14,3 +14,35 @@ export function navigationScroll(
     return false;
   return { top: 0 };
 }
+
+export type ScrollPosition = { left: number; top: number };
+
+/** Restore after asynchronously loaded rows make the scroll position reachable. */
+export function restoreWorkspaceScroll(
+  container: HTMLElement,
+  position: ScrollPosition,
+) {
+  let observer: ResizeObserver | undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const interactions = ["wheel", "touchstart", "pointerdown", "keydown"];
+  const cancel = () => {
+    observer?.disconnect();
+    clearTimeout(timeout);
+    for (const event of interactions)
+      container.removeEventListener(event, cancel);
+  };
+  const restore = () => {
+    container.scrollTo({ ...position, behavior: "instant" });
+    if (Math.abs(container.scrollTop - position.top) < 1) cancel();
+  };
+  const content = container.querySelector(".sd-page");
+  if (content && position.top > 0) {
+    observer = new ResizeObserver(restore);
+    observer.observe(content);
+    timeout = setTimeout(cancel, 5000);
+    for (const event of interactions)
+      container.addEventListener(event, cancel, { passive: true });
+  }
+  restore();
+  return cancel;
+}

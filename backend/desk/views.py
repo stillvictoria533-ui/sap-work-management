@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from .models import User, Ticket, Event, Attachment, Notification, Delivery, Audit, LoginBucket, ExpediteRequest
-from .permissions import Admin, SignedIn
+from .permissions import ActiveAccount, Admin, SignedIn
 from .pagination import Pagination
 from .serializers import UserSerializer, AccountInput, PasswordInput, TicketInput, ReplyInput, StatusInput, ScheduleInput, TicketSerializer, TicketDetailSerializer, CalendarTicketSerializer, NotificationSerializer, DeliverySerializer
 from .services import scoped_tickets, filtered_tickets, create_ticket, reply_ticket, change_ticket_status, change_ticket_schedule, scoped_notifications
@@ -134,7 +134,7 @@ class TicketDetail(APIView):
         return Response(TicketDetailSerializer(ticket).data)
 
 class DevelopmentCalendar(APIView):
-    permission_classes = [Admin]
+    permission_classes = [ActiveAccount]
 
     def get(self, request):
         zone = ZoneInfo('Asia/Shanghai')
@@ -154,6 +154,7 @@ class DevelopmentCalendar(APIView):
         mode = request.query_params.get('mode', 'submitted')
         if mode not in ['submitted', 'estimated']:
             raise ValidationError('日历视图无效。')
+        # Scope both calendar rows and every summary before grouping or paging.
         base = scoped_tickets(request.user)
         if mode == 'estimated':
             tickets = base.filter(estimated_completion_date__gte=first, estimated_completion_date__lt=following)

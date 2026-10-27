@@ -70,7 +70,7 @@ async function logout() {
             ></NavLink
           ><NavLink to="/tickets?scope=archive"
             ><Icon name="archive" />已归档</NavLink
-          ><NavLink v-if="user?.role === 'admin'" to="/calendar"
+          ><NavLink to="/calendar"
             ><Icon name="calendar-days" />开发日历</NavLink
           >
           <template v-if="user?.role === 'admin'">

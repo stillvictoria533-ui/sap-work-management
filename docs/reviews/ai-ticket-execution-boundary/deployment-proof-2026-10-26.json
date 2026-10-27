@@ -1,0 +1,140 @@
+{
+  "status": "published",
+  "date": "2026-10-26",
+  "version": "permissions-20261024-ef8bb09dad4c",
+  "postgresql": {
+    "database_vendor": "postgresql",
+    "tests_run": 167,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "row_locks": true
+  },
+  "sap_validation": {
+    "DS4/110": "MTART once, passed 2026-10-24",
+    "QS4/120": "MTART once, passed 2026-10-24",
+    "PS4/100": "MTART once in explicitly authorized new isolated round, passed 2026-10-26",
+    "ps4_audit": {
+      "system": "PS4",
+      "client": "100",
+      "object": "MTART",
+      "successful_signed_read_count": 1,
+      "audit_statuses": [
+        "start",
+        "approval-verified",
+        "ok"
+      ],
+      "fixed_identity_verified": true,
+      "old_round_reset": false
+    },
+    "old_round_preserved_and_rejected": true
+  },
+  "cloud_identity": {
+    "name": "sapdesk-ai-ticket-9f7c571e",
+    "consoleLogin": 0,
+    "policyId": 291106896,
+    "attachedPolicyCount": 1,
+    "document": {
+      "statement": [
+        {
+          "action": [
+            "tat:RunCommand"
+          ],
+          "effect": "allow",
+          "resource": [
+            "qcs::lighthouse:na-siliconvalley:uin/100028722619:instance/lhins-9wkf7wc5"
+          ]
+        },
+        {
+          "action": [
+            "tat:DescribeInvocationTasks"
+          ],
+          "effect": "allow",
+          "resource": [
+            "qcs::lighthouse:na-siliconvalley:uin/100028722619:instance/lhins-9wkf7wc5",
+            "qcs::tat:na-siliconvalley:uin/100028722619:command/*"
+          ]
+        },
+        {
+          "action": [
+            "tat:DescribeInvocations"
+          ],
+          "effect": "allow",
+          "resource": [
+            "qcs::tat:na-siliconvalley:uin/100028722619:command/*"
+          ]
+        }
+      ],
+      "version": "2.0"
+    }
+  },
+  "server": {
+    "version": "permissions-20261024-ef8bb09dad4c",
+    "old_image": "sha256:94d01c79b93e4601491dc13bab0dfd3f8c34810899b6b0870ac1c870ccd03bc9",
+    "new_image": "sha256:bf4f9ab5eabd3644d402671420dcfdcc7c22e924eac7154f2d94f82854db16a7",
+    "healthy": true,
+    "migration_0013": true,
+    "backup": "/opt/sapdesk/backups/permissions-20261024-ef8bb09dad4c",
+    "database_backup_bytes": 110880,
+    "source_hashes_verified": true,
+    "ai_enabled": true,
+    "query_table_accessible": true,
+    "health_wait_correction": "first wait window was shorter than first health interval; independent readback passed"
+  },
+  "mac_runtime": {
+    "version": "permissions-20261024-ef8bb09dad4c",
+    "runtime": "/Users/apple/Desktop/SAP工作管理平台/release/ai-ticket-runtime/permissions-20261024-ef8bb09dad4c",
+    "launchagent_loaded": true,
+    "shadow": "SHADOW_EMPTY",
+    "background_scan": "EMPTY",
+    "new_flags_created": true,
+    "old_developer_directory_not_used": true
+  },
+  "final_local": {
+    "launchagent_loaded": true,
+    "runtime_hashes_verified": true,
+    "last_scan": "EMPTY",
+    "last_scan_at": 1792975041.993672,
+    "last_error": null,
+    "last_exit_code": "0",
+    "old_project_dispatch_flag_disabled": true
+  },
+  "post_publish": {
+    "production_gateway_enabled": true,
+    "candidate_count": 0,
+    "operator_get_rejected": true,
+    "no_reply_submitted": true,
+    "no_sap_query_executed": true
+  },
+  "cleanup": {
+    "temporary_database_removed": true,
+    "temporary_role_removed": true,
+    "temporary_container_removed": true,
+    "temporary_directory_removed": true,
+    "validation_records_preserved": "/opt/sapdesk/backups/permissions-20261024-ef8bb09dad4c/isolated-validation.dump",
+    "validation_snapshot_sha256": "01b7dd2ca3405d9768d194ac889ed271133c1c8e9ac7c4a60171e295f999031f"
+  },
+  "source_sha256": {
+    "backend/desk/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "backend/desk/ai.py": "7d1d8f22c169f44807a6e8d6e2f24e79f922e6d7adadb22bc36c6e53633e2887",
+    "backend/desk/ai_gateway.py": "63354be0c7ab2f318880d7c245e9883785a09a7dc7a4463430a36f5c462e4611",
+    "backend/desk/ai_policy.py": "dbed7b69ee26fad126b0be6dda33785982a8f0425797266784072979a23a868c",
+    "backend/desk/management/commands/ai_ticket_gateway.py": "52b6e1dbb642b5479f8462d2618a983f48e59a13152c34342953a068687740e0",
+    "backend/desk/migrations/0013_ai_execution_boundary.py": "4056f2901bc5de42120370a63ec60dde22c55055094f985fbc21fd2431ce3999",
+    "backend/desk/models.py": "5fd7ecc8f190e06a2bda8e8972423624fa80c03075ab08bbc204254067b37240",
+    "deploy/com.sapdesk.ai-ticket-dispatcher.plist.template": "8a02e5b71ca787e923d9f626a79245df98bf88522416b9b627a9c20e0164a052",
+    "docs/AI_TICKET_PLANNER_PROMPT.md": "26cb15ec039fc4ac21c7b883acbb320f0c3b50e663387297ad659324f78f98f4",
+    "scripts/ai_ticket_dispatch.py": "605a4beb893a8efa8df9dbd7ded2ba73ce52ac2be1131304e36828dbfa0d7b63",
+    "scripts/ai_ticket_model.py": "a9af1b42959bd0e821705b7632ad9aac39af8d8da08589562a64b153c426042d",
+    "scripts/ai_ticket_sap.mjs": "430e5d0b93e9e73f6bfff6cae5aa71163e29ff82d077804feb766153f788999b",
+    "scripts/ai_ticket_scan.cjs": "097fd48bd85ff59006788a93a98bb1a4af8af431ba377f56267831c83d6ebfba",
+    "scripts/ai_ticket_transport.cjs": "e73073c1056dfd41656f35d0fe2bce1b4e43427d0e0dae1261992d042a461892",
+    "scripts/ai_ticket_worker.py": "077f51bd6984dd67d655634cecd62568c409363114b88908b87cb8ceabcb51d0",
+    "scripts/render_ai_ticket_launchd.py": "4309b0dd089368b407fdcac59a9c4980306d162a1f0cb41a8c264cd6e3df4e89"
+  },
+  "remaining_limits": [
+    "Model and coordinator still share one OS user; no-tools model capability is not OS account isolation.",
+    "Only reviewed ddic/source/data/tcode operations and data projection catalog are automated.",
+    "TAT result-read command resources include the explicitly authorized account/region wildcard."
+  ]
+}

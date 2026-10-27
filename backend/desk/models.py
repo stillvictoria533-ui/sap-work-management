@@ -109,6 +109,7 @@ class TicketAIRun(models.Model):
     trigger = models.ForeignKey(Event, on_delete=models.PROTECT, related_name='ai_triggers')
     accepted_event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name='ai_acceptances')
     context_version = models.PositiveIntegerField()
+    accepted_scope = models.JSONField(default=dict)
     status = models.CharField(max_length=16, default='queued')
     lease_token = models.UUIDField(default=uuid.uuid4)
     lease_expires_at = models.DateTimeField(default=timezone.now)
@@ -123,6 +124,26 @@ class TicketAIRun(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=['ticket', 'trigger'], name='unique_ai_ticket_trigger')]
         indexes = [models.Index(fields=['status', 'lease_expires_at'])]
+
+
+class TicketAIQuery(models.Model):
+    """A consumed, per-run query budget entry and executor-owned evidence receipt."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    run = models.ForeignKey(TicketAIRun, on_delete=models.PROTECT, related_name='queries')
+    request_key = models.UUIDField()
+    context_version = models.PositiveIntegerField()
+    lease_token = models.UUIDField()
+    plan = models.JSONField()
+    plan_hash = models.CharField(max_length=64)
+    status = models.CharField(max_length=12, default='reserved')
+    deadline_at = models.DateTimeField()
+    result_hash = models.CharField(max_length=64, blank=True)
+    error_code = models.CharField(max_length=40, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    finished_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['run', 'request_key'], name='unique_ai_query_request')]
 
 def upload_path(instance, filename):
     return f'{instance.event.ticket_id}/{uuid.uuid4().hex}'

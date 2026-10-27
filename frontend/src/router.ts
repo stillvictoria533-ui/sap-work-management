@@ -1,9 +1,35 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 import { ready, user } from "./state";
-import { navigationScroll } from "./scroll";
+import {
+  navigationScroll,
+  restoreWorkspaceScroll,
+  type ScrollPosition,
+} from "./scroll";
+const workspacePositions = new Map<number, ScrollPosition>();
+let currentEntry: number | undefined = window.history.state?.position;
+let cancelScrollRestore = () => {};
+function workspaceScroller() {
+  const main = document.querySelector<HTMLElement>("#sd-workspace .sd-main");
+  return main && getComputedStyle(main).overflowY === "auto" ? main : null;
+}
 export const router = createRouter({
   history: createWebHashHistory(),
-  scrollBehavior: navigationScroll,
+  scrollBehavior(to, from, savedPosition) {
+    currentEntry = window.history.state?.position;
+    const main = workspaceScroller();
+    const saved =
+      savedPosition && main && currentEntry !== undefined
+        ? workspacePositions.get(currentEntry) || savedPosition
+        : savedPosition;
+    const position = navigationScroll(to, from, saved);
+    if (!main) return position;
+    if (position)
+      cancelScrollRestore = restoreWorkspaceScroll(main, {
+        left: "left" in position ? position.left : 0,
+        top: position.top,
+      });
+    return false;
+  },
   routes: [
     {
       path: "/",
@@ -23,7 +49,6 @@ export const router = createRouter({
     {
       path: "/calendar",
       component: () => import("./pages/Calendar.vue"),
-      meta: { admin: true },
     },
     { path: "/tickets/new", component: () => import("./pages/NewTicket.vue") },
     {
@@ -54,6 +79,13 @@ export const router = createRouter({
   ],
 });
 router.beforeEach(async (to) => {
+  cancelScrollRestore();
+  const main = workspaceScroller();
+  if (main && currentEntry !== undefined)
+    workspacePositions.set(currentEntry, {
+      left: main.scrollLeft,
+      top: main.scrollTop,
+    });
   if (to.meta.public) return true;
   await ready;
   if (!to.meta.public && !user.value)

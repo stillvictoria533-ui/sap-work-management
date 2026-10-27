@@ -3,6 +3,7 @@
 No model or SAP call is made here. Ticket/SAP text remains untrusted evidence.
 """
 import uuid
+import copy
 from datetime import timedelta
 
 from django.conf import settings
@@ -11,8 +12,9 @@ from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from .models import Audit, Event, Ticket, TicketAIRun, User
+from .models import Audit, Event, Ticket, TicketAIRun, TicketAIQuery, User
 from .services import notify_for_event
+from .ai_policy import freeze_scope, document_keys, DATA_TABLES, MAX_QUERIES
 
 SYSTEM_CLIENTS = {'DS4': '110', 'QS4': '120', 'PS4': '100'}
 BLOCK_REASONS = {'sap_unavailable', 'authorization_missing', 'context_incomplete', 'evidence_incomplete', 'runtime_error', 'time_limit'}
@@ -31,6 +33,28 @@ def enabled():
 def acceptance(ticket):
     return ticket.events.filter(kind='status', from_status='pending', to_status='in-progress',
         actor_role='admin', actor__role='admin', actor__is_active=True).order_by('-id').first()
+
+
+def accepted_scope(ticket, accepted):
+    previous = TicketAIRun.objects.filter(ticket=ticket, accepted_event=accepted).exclude(
+        accepted_scope={}).order_by('-created_at', '-id').first()
+    scope = copy.deepcopy(previous.accepted_scope) if previous else freeze_scope(
+        ticket.system, ticket.title, ticket.description, accepted.body, accepted.pk)
+    # A missing document key may be supplied once by the authenticated submitter.
+    # This narrows an accepted object; it cannot replace an existing key or add an
+    # object/system. Later messages never append additional authorized documents.
+    primary = {DATA_TABLES[obj][1] for obj in scope['objects'] if obj in DATA_TABLES}
+    missing = primary - set(scope.get('document_keys', {}))
+    if missing:
+        followups = ticket.events.filter(kind='reply', actor_id=ticket.owner_id, actor_role='consultant',
+            is_ai=False, pk__gt=accepted.pk).order_by('-id')[:100]
+        for followup in reversed(list(followups)):
+            supplied = document_keys(followup.body, scope['objects'])
+            for field in sorted(missing - set(scope['document_keys'])):
+                if len(supplied.get(field, [])) == 1:
+                    scope['document_keys'][field] = supplied[field]
+                    scope.setdefault('key_completion_events', {})[field] = followup.pk
+    return scope
 
 
 def retry_requested(run):
@@ -136,6 +160,7 @@ def enqueue_after_event(ticket, item):
         status='superseded', reason='version_changed', updated_at=timezone.now())
     run, created = TicketAIRun.objects.get_or_create(ticket=ticket, trigger=trigger, defaults={
         'accepted_event': accepted, 'context_version': ticket.version, 'status': 'queued',
+        'accepted_scope': accepted_scope(ticket, accepted),
         'lease_expires_at': timezone.now(), 'attempts': 0,
     })
     if created:
@@ -213,6 +238,7 @@ def claim(ticket_id, version):
             'lease_token':uuid.uuid4(),'lease_expires_at':min(now+LEASE_DURATION, deadline),
             'deadline_at':deadline,
             'retry_after':None,'reason':'','attempts':1,'updated_at':timezone.now()}
+        values['accepted_scope'] = accepted_scope(ticket, accepted)
         if run:
             values['attempts']=run.attempts+1 if run.context_version==ticket.version else 1
             for key,value in values.items(): setattr(run,key,value)
@@ -226,7 +252,8 @@ def claim(ticket_id, version):
             'previous_reason':previous_reason,
             'manual_retry':retry_requested(run),
             'accepted_by':accepted.actor_id,'accepted_at':accepted.created_at.isoformat(),
-            'acceptance_note':accepted.body,'context':ticket_context(ticket)}
+            'acceptance_note':accepted.body,'context':ticket_context(ticket),
+            'read_scope':run.accepted_scope,'query_limit':MAX_QUERIES,'queries_used':run.queries.count()}
 
 
 def renew(run_id, lease_token):
@@ -310,6 +337,18 @@ def publish(run_id, lease_token, payload):
         if reason:
             run.status='superseded';run.reason=reason;run.updated_at=timezone.now();run.save()
             return {'outcome':'skipped','reason':reason}
+        # References are minted by the trusted executor, never accepted as free text
+        # from a model. Bind every receipt to this exact run, version and lease.
+        for reference in evidence:
+            try:
+                prefix, query_id = reference['reference'].split(':', 1)
+                if prefix != 'sap-ticket-query': raise ValueError()
+                receipt = TicketAIQuery.objects.get(pk=uuid.UUID(query_id), run=run,
+                    status='succeeded', context_version=run.context_version, lease_token=run.lease_token)
+            except (ValueError, TicketAIQuery.DoesNotExist):
+                raise ValidationError('SAP 证据必须来自本轮受控查询回执。')
+            if not receipt.result_hash or reference['system'] != ticket.system or reference['system'] != run.accepted_scope.get('system') or reference['client'] != SYSTEM_CLIENTS.get(ticket.system):
+                raise ValidationError('SAP 证据与本轮受理范围不匹配。')
         ticket.version+=1;ticket.updated_at=timezone.now();ticket.save(update_fields=['version','updated_at'])
         item=Event.objects.create(ticket=ticket,actor=accepted.actor,actor_name='AI · SAP 助手',actor_role='ai',
             kind='reply',body=body,is_ai=True,version=ticket.version)
@@ -341,6 +380,8 @@ def defer(run_id,lease_token,reason):
             else:
                 run.retry_after = now + delay
         run.save()
+        Audit.objects.create(actor=run.accepted_event.actor, action='ai_ticket_blocked', target=str(run.ticket_id),
+            detail={'run_id': str(run.pk), 'reason': run.reason, 'manual_required': manual_required})
         return {'outcome':'blocked','reason':run.reason,'manual_required':manual_required}
 
 

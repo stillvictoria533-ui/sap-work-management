@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { api } from "../api";
-import { stats } from "../state";
+import { stats, user } from "../state";
 import { calendarDays, shiftMonth } from "../calendar";
 import { priorities, today, type CalendarPage } from "../types";
 import Icon from "../components/Icon.vue";
@@ -11,6 +11,7 @@ import ScheduleDate from "../components/ScheduleDate.vue";
 
 const route = useRoute(),
   router = useRouter();
+const isAdmin = computed(() => user.value?.role === "admin");
 const thisMonth = today().slice(0, 7);
 function queryMonth() {
   const value = String(route.query.month || thisMonth);
@@ -155,6 +156,7 @@ onUnmounted(() => {
       <div>
         <h1>开发日历</h1>
         <p class="cal-subtitle">
+          <span v-if="!isAdmin">仅显示我提交的工单。</span>
           {{
             mode === "estimated"
               ? "按开发预计完成日期查看交付安排；未评估工单不进入日历。"
@@ -163,7 +165,7 @@ onUnmounted(() => {
         </p>
       </div>
       <div class="sd-flex cal-heading-actions">
-        <RouterLink class="sd-button sd-primary" to="/scheduling"
+        <RouterLink v-if="isAdmin" class="sd-button sd-primary" to="/scheduling"
           ><Icon name="calendar-days" />调整排期<small
             v-if="stats.expedite_pending"
             >{{ stats.expedite_pending }} 条加急待评估</small

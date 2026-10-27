@@ -168,9 +168,7 @@
 #sap-desk-design .sd-table th,
 #sap-desk-design .sd-ticket-sub,
 #sap-desk-design .sd-status,
-#sap-desk-design .sd-event-text,
-#sap-desk-design .sd-meta-pair dt,
-#sap-desk-design .sd-message-head time {
+#sap-desk-design .sd-meta-pair dt {
   font-size: 11px;
 }
 @media (max-width: 650px) {

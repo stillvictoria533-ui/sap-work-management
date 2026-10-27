@@ -106,15 +106,13 @@ def send_turn(user, pk, data):
         item = get_object_or_404(scoped_conversations(user), pk=pk)
         existing = item.turns.filter(request_key=data['request_key']).first()
         if existing:
-            if existing.input_text != data['message'] or existing.sap_query_id != data.get('sap_query_id'):
+            if existing.input_text != data['message']:
                 raise Conflict('重复请求的问题内容不同，请刷新对话后重试。')
             return existing, False
         check_budget(user, item)
-        from .connector import evidence_for_turn
-        evidence = evidence_for_turn(user, item, data.get('sap_query_id'))
         values = enqueue_values(user)
         turn = Turn.objects.create(conversation=item, request_key=data['request_key'], input_text=data['message'],
-                                   sap_query=evidence, attempt=1 if values['status'] == 'queued' else 0, **values)
+                                   attempt=1 if values['status'] == 'queued' else 0, **values)
         if item.title == '新对话':
             item.title = ' '.join(data['message'].split())[:60]
         item.updated_at = timezone.now()

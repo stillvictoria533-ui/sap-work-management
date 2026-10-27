@@ -6,7 +6,7 @@ const { AbstractClient } = require(path.join(
   os.homedir(), '.codex/mcp/tencent-lighthouse/node_modules/tencentcloud-sdk-nodejs-common/tencentcloud/common/abstract_client.js',
 ));
 
-const credentialsPath = path.join(os.homedir(), '.codex/mcp/tencent-lighthouse/credentials.json');
+const credentialsPath = path.join(os.homedir(), '.codex/security/sapdesk-ai-ticket/credentials.json');
 if (fs.statSync(credentialsPath).mode & 0o077) throw new Error('CREDENTIAL_PERMISSIONS');
 const auth = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
 const client = new AbstractClient('tat.tencentcloudapi.com', '2020-10-28', {

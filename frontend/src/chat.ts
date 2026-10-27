@@ -12,12 +12,6 @@ export interface ChatTurn {
   created_at: string;
   context_meta: {
     sap_connected?: boolean;
-    sap_evidence?: {
-      query_id: string;
-      system: string;
-      object: string;
-      collected_at: string;
-    };
     system?: string;
     history_truncated?: boolean;
     ticket?: { number: string; version: number };
