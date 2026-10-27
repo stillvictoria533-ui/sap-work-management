@@ -1,0 +1,174 @@
+{
+  "status": "published_and_synchronized",
+  "version": "audit-followup-ad0388d",
+  "timezone": "Asia/Shanghai",
+  "approved_code_commit": "ad0388d9b4ec10a9528f0f6440f5778860d9d678",
+  "application_verified_at_beijing": "2026-10-27 14:10:24",
+  "ai_runtime_activated_at_beijing": "2026-10-27 14:11:01",
+  "github": {
+    "branch": "main",
+    "application_commit": "ad0388d9b4ec10a9528f0f6440f5778860d9d678",
+    "remote_application_commit_verified": "ad0388d9b4ec10a9528f0f6440f5778860d9d678",
+    "workflow_run_id": 40459623275,
+    "workflow_status": "completed",
+    "workflow_conclusion": "success",
+    "workflow_url": "https://github.com/stillvictoria533-ui/sap-work-management/actions/runs/40459623275"
+  },
+  "server": {
+    "version": "audit-followup-ad0388d",
+    "code_commit": "ad0388d9b4ec10a9528f0f6440f5778860d9d678",
+    "started_at": "2026-10-27T06:09:14.159137+00:00",
+    "postgresql": {
+      "database": "postgresql",
+      "tests": 186,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "phase": "verified",
+    "backup": "/opt/sapdesk/backups/audit-followup-ad0388d-20261027T060944Z",
+    "backup_sha256": {
+      "database.dump": "ed4fb0c9c1f939e9e43b7ac1402ce1b642445ae1b487f8ad6ea5f97913adc4f8",
+      "attachments.tar.gz": "c1a34a0def76b55d8047c9958486901047a7fd48ca224f64eaa3502ffe6778a9",
+      "sources.tar.gz": "59c847fd8f4a589f8b038bebd51df8da144f810a24a5994eeb9769a79054c454"
+    },
+    "migration_plan": "none",
+    "containers": [
+      {
+        "Service": "api",
+        "State": "running",
+        "Health": "healthy"
+      },
+      {
+        "Service": "chat-worker",
+        "State": "running",
+        "Health": "healthy"
+      },
+      {
+        "Service": "db",
+        "State": "running",
+        "Health": "healthy"
+      },
+      {
+        "Service": "web",
+        "State": "running",
+        "Health": ""
+      },
+      {
+        "Service": "worker",
+        "State": "running",
+        "Health": ""
+      }
+    ],
+    "completed_at": "2026-10-27T06:10:24.156235+00:00",
+    "images": {
+      "api": "sha256:6f48e4d128278bb414af2dc7cf83f8040c792f679277cc04616755900972f2a0",
+      "worker": "sha256:6f48e4d128278bb414af2dc7cf83f8040c792f679277cc04616755900972f2a0",
+      "chat-worker": "sha256:e21d0f6415af8e0448afdbee3c05389a72d70ee12219d28813e67234dc4b4080",
+      "web": "sha256:d2cae45bb73d224d48b3f5ddd28d00fb0b8c6f37bd082984ee0844e8d8d3211a"
+    },
+    "source_files_checked": 134,
+    "image_backend_checks": {
+      "api": {
+        "checked": 76,
+        "mismatches": []
+      },
+      "worker": {
+        "checked": 76,
+        "mismatches": []
+      },
+      "chat-worker": {
+        "checked": 76,
+        "mismatches": []
+      }
+    },
+    "web_files_checked": 28,
+    "https_health": 200,
+    "https_index": 200,
+    "anonymous_session": 200,
+    "production_smoke": {
+      "unicode_search": 200,
+      "invalid_owner": 400,
+      "invalid_focus": 400,
+      "version_endpoint": 200,
+      "streaming_export": 200,
+      "password_spaces_and_session": 200,
+      "incomplete_scope_rejected": true,
+      "crossed_business_tuple_rejected": true,
+      "legacy_tuple_reconstruction_safe": true,
+      "latest_schedule_preserved_on_acceptance": true,
+      "temporary_records_rolled_back": true,
+      "database": "postgresql"
+    },
+    "real_sap_queries_executed": false
+  },
+  "runtime": {
+    "activated_at": 1793081461.1747022,
+    "runtime": "/Users/apple/Desktop/SAP工作管理平台/release/ai-ticket-runtime/audit-followup-ad0388d",
+    "launchagent_loaded": true,
+    "start_interval": 60,
+    "environment_unchanged": true,
+    "shadow": "SHADOW_EMPTY",
+    "files_verified": 11,
+    "hash_sha256": {
+      "backend/desk/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "backend/desk/ai_policy.py": "4d51888c6911e988f33bbb3e49bd415139d42d2a28f0d75569d4023ec8b2047e",
+      "deploy/com.sapdesk.ai-ticket-dispatcher.plist.template": "8a02e5b71ca787e923d9f626a79245df98bf88522416b9b627a9c20e0164a052",
+      "docs/AI_TICKET_PLANNER_PROMPT.md": "281cf1e6b9b08fdee59d56792f383c539045ff67847c3c90742176784aa7c120",
+      "scripts/ai_ticket_dispatch.py": "605a4beb893a8efa8df9dbd7ded2ba73ce52ac2be1131304e36828dbfa0d7b63",
+      "scripts/ai_ticket_model.py": "a9af1b42959bd0e821705b7632ad9aac39af8d8da08589562a64b153c426042d",
+      "scripts/ai_ticket_sap.mjs": "430e5d0b93e9e73f6bfff6cae5aa71163e29ff82d077804feb766153f788999b",
+      "scripts/ai_ticket_scan.cjs": "097fd48bd85ff59006788a93a98bb1a4af8af431ba377f56267831c83d6ebfba",
+      "scripts/ai_ticket_transport.cjs": "e73073c1056dfd41656f35d0fe2bce1b4e43427d0e0dae1261992d042a461892",
+      "scripts/ai_ticket_worker.py": "077f51bd6984dd67d655634cecd62568c409363114b88908b87cb8ceabcb51d0",
+      "scripts/render_ai_ticket_launchd.py": "4309b0dd089368b407fdcac59a9c4980306d162a1f0cb41a8c264cd6e3df4e89"
+    },
+    "crossed_tuple_rejected": true,
+    "new_background_scan": true,
+    "last_scan": "EMPTY",
+    "last_error": null,
+    "last_exit_code_zero": true,
+    "last_worker_result": "OK"
+  },
+  "old_images": {
+    "api": "sha256:4b3310ff304d7b48ca69352eb705ec908ba49c1710c8edcc476ca1bf7cd67596",
+    "worker": "sha256:4b3310ff304d7b48ca69352eb705ec908ba49c1710c8edcc476ca1bf7cd67596",
+    "chat-worker": "sha256:488f9c7e906d52626792fa39f3e42e3ad218847b888c6f4077f5f1ff3e4e75e9",
+    "web": "sha256:dda6ad3bb66bd057a7e86dfb932150a900dfb613af4bbc355d51d2232f6bfcd5"
+  },
+  "public_health_from_mac": {
+    "https_status": 200,
+    "response": "ok",
+    "certificate_verified": true
+  },
+  "validation_fixtures": {
+    "postgresql_test_database_removed": true,
+    "postgresql_test_role_removed": true,
+    "production_smoke_records_rolled_back": true,
+    "validation_notifications_sent": false
+  },
+  "preserved": {
+    "original_workspace_changes": true,
+    "production_business_data": true,
+    "old_images_and_private_backup": true,
+    "old_ai_runtime_disabled": true,
+    "existing_sap_ai_heartbeat_paused": true,
+    "old_ai_processes_at_switch": 0
+  },
+  "release_package": {
+    "source_files": 134,
+    "baseline_files": 130,
+    "web_files": 28,
+    "bytes": 367348,
+    "sha256": "3e61d733964da31e63beb7db65c2c8d0e184bb5ed97fc31771fbc2402614d2e2",
+    "build": "passed"
+  },
+  "previous_launchagent_backup": {
+    "path": "/Users/apple/Desktop/SAP工作管理平台/release/ai-ticket-runtime/audit-followup-ad0388d/release/previous-launchagent.plist",
+    "sha256": "27713d1038ecffbfa3668ed81d7306b3ca31a986e8d74cd4247d2f7ca5295ef9"
+  },
+  "ci_and_source_note": "GitHub CI passed for the exact deployed implementation commit; this release record and status documents are synchronized afterward without changing runtime code.",
+  "limits": [
+    "No additional live SAP or model-provider acceptance queries were executed for this release.",
+    "Old scopes whose accepted material cannot establish pairings remain fail-closed and require clarification or manual review."
+  ]
+}

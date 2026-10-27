@@ -92,7 +92,7 @@ npm --prefix frontend run dev
 
 2026-10-27 优先级修复已上线，范围、PostgreSQL 回归、生产冒烟及 GitHub 同步证据见 [修复与发布记录](docs/reviews/audit-priority-fixes/README.md)。该记录明确区分已验证修复和后续容量、监控、灾备建议。
 
-基于 `22c3987` 复核反馈的下一轮修复（业务键组合、日期草稿基线、新建页迟到响应、列表类型及版本查询）目前为本地待审阅状态，见 [跟进修复审阅](docs/reviews/audit-followup-fixes/README.md)，需取得本轮最终内容的发布确认后上线。
+基于 `22c3987` 复核反馈的跟进修复（业务键组合、日期草稿基线、新建页迟到响应、列表类型及版本查询）已上线，见 [跟进修复发布记录](docs/reviews/audit-followup-fixes/README.md)。
 
 ## 通知规则与钉钉配置
 

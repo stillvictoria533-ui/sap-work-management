@@ -37,3 +37,5 @@
 最近同步记录：[2026-10-27 已上线版本同步 GitHub](reviews/github-sync-20261027/README.md)。
 
 后续发布记录：[2026-10-27 优先级修复上线与 GitHub 同步](reviews/audit-priority-fixes/README.md)，上线代码 `c1c654a`，服务器隔离 PostgreSQL 171 项回归与生产冒烟通过。
+
+最新发布记录：[2026-10-27 复核跟进修复上线与 GitHub 同步](reviews/audit-followup-fixes/README.md)，上线代码 `ad0388d`，服务器隔离 PostgreSQL 186 项回归与生产冒烟通过。
