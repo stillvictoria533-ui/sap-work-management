@@ -14,7 +14,7 @@ from rest_framework.exceptions import ValidationError
 
 from .models import Audit, Event, Ticket, TicketAIRun, TicketAIQuery, User
 from .services import notify_for_event
-from .ai_policy import freeze_scope, document_keys, required_data_keys, DATA_TABLES, MAX_QUERIES
+from .ai_policy import freeze_scope, upgrade_data_scope, complete_data_objects, required_data_keys, DATA_TABLES, MAX_QUERIES
 
 SYSTEM_CLIENTS = {'DS4': '110', 'QS4': '120', 'PS4': '100'}
 BLOCK_REASONS = {'sap_unavailable', 'authorization_missing', 'context_incomplete', 'evidence_incomplete', 'runtime_error', 'time_limit'}
@@ -40,21 +40,17 @@ def accepted_scope(ticket, accepted):
         accepted_scope={}).order_by('-created_at', '-id').first()
     scope = copy.deepcopy(previous.accepted_scope) if previous else freeze_scope(
         ticket.system, ticket.title, ticket.description, accepted.body, accepted.pk)
-    # A missing document key may be supplied once by the authenticated submitter.
-    # This narrows an accepted object; it cannot replace an existing key or add an
-    # object/system. Later messages never append additional authorized documents.
-    primary = {field for obj in scope['objects'] if obj in DATA_TABLES
-               for field in DATA_TABLES[obj][1].split()}
-    missing = primary - set(scope.get('document_keys', {}))
-    if missing:
+    original = freeze_scope(ticket.system, ticket.title, ticket.description, accepted.body, accepted.pk) if (
+        scope.get('schema') == 'ticket-read-scope/v1') else None
+    upgrade_data_scope(scope, original)
+    # Only missing keys on an identified accepted object may be completed.
+    # A follow-up cannot replace a bound key, add an object or pair legacy lists.
+    if any(required_data_keys(obj, scope) - set(record)
+           for obj, records in scope.get('data_objects', {}).items() if obj in DATA_TABLES for record in records):
         followups = ticket.events.filter(kind='reply', actor_id=ticket.owner_id, actor_role='consultant',
             is_ai=False, pk__gt=accepted.pk).order_by('-id')[:100]
         for followup in reversed(list(followups)):
-            supplied = document_keys(followup.body, scope['objects'])
-            for field in sorted(missing - set(scope['document_keys'])):
-                if len(supplied.get(field, [])) == 1:
-                    scope['document_keys'][field] = supplied[field]
-                    scope.setdefault('key_completion_events', {})[field] = followup.pk
+            complete_data_objects(scope, followup.body, followup.pk)
     scope['data_keys'] = {obj: sorted(required_data_keys(obj, scope))
                           for obj in scope['objects'] if obj in DATA_TABLES}
     return scope

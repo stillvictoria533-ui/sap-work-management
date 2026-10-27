@@ -1,0 +1,101 @@
+{
+  "date": "2026-10-27",
+  "timezone": "Asia/Shanghai",
+  "status": "local_review_only",
+  "base_commit": "22c3987edad44225cf0e6ace3c522a7282c8bb1c",
+  "branch": "codex/audit-followup-fixes",
+  "environment": {
+    "python": "3.14.3",
+    "node": "24.21.0",
+    "database": "SQLite",
+    "production_accessed": false,
+    "live_sap_queries": false,
+    "live_provider_calls": false,
+    "external_notifications": false,
+    "deployed": false,
+    "pushed_to_github": false
+  },
+  "checks": [
+    {
+      "command": "python backend/manage.py test desk assistant --noinput",
+      "exit_code": 0,
+      "total": 186,
+      "passed": 184,
+      "skipped": 2,
+      "skip_reason": "Existing PostgreSQL row-lock tests are skipped on SQLite"
+    },
+    {
+      "command": "python3 -m unittest discover -s tests -p 'test_*.py'",
+      "exit_code": 0,
+      "total": 65,
+      "passed": 63,
+      "skipped": 2,
+      "skip_reason": "Optional CLI capability fixture is not configured",
+      "sandbox_note": "A sandboxed attempt could not terminate its own simulated child process group. The final run with that permission passed without source changes."
+    },
+    {
+      "command": "npm --prefix frontend test",
+      "exit_code": 0,
+      "total": 38,
+      "passed": 38,
+      "skipped": 0
+    },
+    {
+      "command": "node --test connector/connector.test.mjs",
+      "exit_code": 0,
+      "total": 5,
+      "passed": 5,
+      "skipped": 0,
+      "network": "loopback fixture only"
+    },
+    {
+      "command": "npm --prefix frontend run build",
+      "exit_code": 0,
+      "typescript": "passed",
+      "vite": "passed"
+    },
+    {
+      "command": "python backend/manage.py makemigrations --check --dry-run",
+      "exit_code": 0,
+      "result": "No changes detected"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "browser_checks": {
+    "data": "temporary SQLite database with separate admin A, admin B and consultant sessions",
+    "untouched_acceptance_date": {
+      "request_version": 2,
+      "date_change_field_present": false,
+      "saved_date": "2026-12-20"
+    },
+    "edited_acceptance_conflict": {
+      "server_date": "2026-12-22",
+      "draft_date": "2026-12-25",
+      "submit_disabled_before_resolution": true,
+      "explicit_resolution_request_version": 3,
+      "saved_date_after_explicit_resolution": "2026-12-25",
+      "mobile_viewport_px": 390,
+      "horizontal_overflow": false
+    },
+    "late_creation": {
+      "actual_response_status": 201,
+      "route_after_leaving_and_releasing_response": "/tickets",
+      "forced_navigation": false
+    }
+  },
+  "totals": {
+    "tests": 294,
+    "passed": 290,
+    "skipped": 4,
+    "failed": 0
+  },
+  "limitations": [
+    "No PostgreSQL or production-container acceptance for this new revision; prior release results do not replace these checks.",
+    "Ambiguous legacy relationships cannot be authorized by pairing independent lists or by a later message; verified original acceptance source may recover explicit relationships.",
+    "Multiple natural-language objects require labelled records on separate lines or semicolon clauses; unsupported pairing remains fail-closed.",
+    "Deployment and GitHub publication require approval of this round's final content."
+  ]
+}

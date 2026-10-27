@@ -5,6 +5,8 @@ from unittest.mock import patch
 
 from django.test import TestCase, SimpleTestCase, TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
 from .ai_policy import PolicyError, cli_arguments, freeze_scope, validate_plan
@@ -231,7 +233,13 @@ class SubmissionAndParameterRegressionTests(TestCase):
         self.assertNotIn('description', self.client.get('/api/tickets').data['results'][0])
         self.assertEqual(self.client.get(f'/api/tickets/{pk}').data['description'], 'original')
         endpoint = f'/api/tickets/{pk}/version'
-        self.assertEqual(self.client.get(endpoint).data, {'id': pk, 'version': 1})
+        with CaptureQueriesContext(connection) as captured:
+            response = self.client.get(endpoint)
+        self.assertEqual(response.data, {'id': pk, 'version': 1})
+        ticket_queries = [query['sql'] for query in captured if 'FROM "desk_ticket"' in query['sql']]
+        self.assertEqual(len(ticket_queries), 1)
+        self.assertNotIn('description', ticket_queries[0])
+        self.assertNotIn('JOIN', ticket_queries[0])
         other = User.objects.create_user(username='other', name='other', email='other@review.test', must_change_password=False)
         self.assertEqual(self.login(other).get(endpoint).status_code, 404)
         self.assertEqual(APIClient().get(endpoint).status_code, 403)

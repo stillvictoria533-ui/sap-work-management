@@ -26,8 +26,10 @@ const route = useRoute(),
   editingSchedule = ref(false),
   expediteDirty = ref(false),
   estimateDate = ref(""),
+  estimateBaseline = ref(""),
   estimateReason = ref(""),
   startEstimate = ref(""),
+  startEstimateBaseline = ref(""),
   selectedAction = ref(""),
   reason = ref(""),
   files = ref<File[]>([]),
@@ -38,12 +40,35 @@ const route = useRoute(),
   newVersion = ref(0),
   pickerKey = ref(0),
   success = ref("");
+const startEstimateDirty = computed(
+  () => startEstimate.value !== startEstimateBaseline.value,
+);
+const estimateDirty = computed(
+  () => estimateDate.value !== estimateBaseline.value,
+);
+const startEstimateConflict = computed(
+  () =>
+    selectedAction.value === "start" &&
+    startEstimateDirty.value &&
+    (ticket.value?.estimated_completion_date || "") !==
+      startEstimateBaseline.value &&
+    (ticket.value?.estimated_completion_date || "") !== startEstimate.value,
+);
+const estimateConflict = computed(
+  () =>
+    editingSchedule.value &&
+    estimateDirty.value &&
+    (ticket.value?.estimated_completion_date || "") !==
+      estimateBaseline.value &&
+    (ticket.value?.estimated_completion_date || "") !== estimateDate.value,
+);
 let sequence = 0;
 let mutationSequence = 0;
 function resetEditors() {
   mutationSequence++;
   body.value = reason.value = estimateDate.value = estimateReason.value = "";
   selectedAction.value = startEstimate.value = success.value = error.value = "";
+  startEstimateBaseline.value = estimateBaseline.value = "";
   files.value = [];
   editingSchedule.value =
     expediteDirty.value =
@@ -73,10 +98,8 @@ async function load() {
     const t = await api<Ticket>("/tickets/" + route.params.id);
     if (seq !== sequence || (ticket.value && t.version < ticket.value.version))
       return;
-    ticket.value = t;
+    acceptUpdate(t);
     newVersion.value = 0;
-    if (!selectedAction.value)
-      startEstimate.value = t.estimated_completion_date || "";
     conflict.value = false;
     const last = t.events?.at(-1);
     if (last)
@@ -157,8 +180,39 @@ function acceptUpdate(updated: Ticket) {
   if (
     String(updated.id) === String(route.params.id) &&
     (!ticket.value || updated.version >= ticket.value.version)
-  )
+  ) {
+    const latest = updated.estimated_completion_date || "";
+    // Rebase untouched dates; preserve actual edits and require a decision if
+    // the server changed that same field. A new version alone grants no intent.
+    if (!startEstimateDirty.value || startEstimate.value === latest) {
+      startEstimateBaseline.value = startEstimate.value = latest;
+    }
+    if (!estimateDirty.value || estimateDate.value === latest) {
+      estimateBaseline.value = estimateDate.value = latest;
+    }
     ticket.value = updated;
+  }
+}
+function selectAction(action: string) {
+  selectedAction.value = action;
+  startEstimateBaseline.value = startEstimate.value =
+    ticket.value?.estimated_completion_date || "";
+  editingSchedule.value = false;
+  reason.value = "";
+}
+function resolveEstimateConflict(
+  editor: "start" | "schedule",
+  keepDraft: boolean,
+) {
+  const latest = ticket.value?.estimated_completion_date || "";
+  if (editor === "start") {
+    if (!keepDraft) startEstimate.value = latest;
+    startEstimateBaseline.value = latest;
+  } else {
+    if (!keepDraft) estimateDate.value = latest;
+    estimateBaseline.value = latest;
+  }
+  error.value = "";
 }
 async function submit() {
   if (!ticket.value || busy.value) return;
@@ -234,6 +288,10 @@ const reasonHint = computed(
 );
 async function changeStatus() {
   if (!ticket.value || !selectedAction.value || busy.value) return;
+  if (startEstimateConflict.value) {
+    error.value = "排期已被更新，请先确认采用哪个日期。";
+    return;
+  }
   const { id, version, estimated_completion_date } = ticket.value;
   const action = selectedAction.value,
     submittedReason = reason.value,
@@ -246,7 +304,9 @@ async function changeStatus() {
       action,
       version,
       reason: submittedReason,
-      ...(action === "start" && estimate !== (estimated_completion_date || "")
+      ...(action === "start" &&
+      startEstimateDirty.value &&
+      estimate !== (estimated_completion_date || "")
         ? { estimated_completion_date: estimate || null }
         : {}),
     });
@@ -306,12 +366,17 @@ const startReasonRequired = computed(
     startEstimate.value !== ticket.value.estimated_completion_date,
 );
 function editSchedule() {
-  estimateDate.value = ticket.value?.estimated_completion_date || "";
+  estimateBaseline.value = estimateDate.value =
+    ticket.value?.estimated_completion_date || "";
   estimateReason.value = "";
   editingSchedule.value = true;
 }
 async function saveSchedule() {
   if (!ticket.value || busy.value) return;
+  if (estimateConflict.value) {
+    error.value = "排期已被更新，请先确认采用哪个日期。";
+    return;
+  }
   const { id, version } = ticket.value;
   const date = estimateDate.value,
     submittedReason = estimateReason.value;
@@ -401,12 +466,7 @@ async function getFile(f: Attachment) {
           class="sd-button"
           :class="action === 'complete' ? '' : 'sd-primary'"
           :disabled="busy || conflict || editingSchedule"
-          @click="
-            selectedAction = action;
-            startEstimate = ticket.estimated_completion_date || '';
-            editingSchedule = false;
-            reason = '';
-          "
+          @click="selectAction(action)"
         >
           {{ actionLabels[action] }}
         </button>
@@ -434,6 +494,29 @@ async function getFile(f: Attachment) {
             >预计完成开发、自测并可提交验收的日期；暂不确定可留空。</span
           >
         </label>
+        <div v-if="startEstimateConflict" class="sd-error" role="alert">
+          <p>
+            排期已更新为
+            {{ ticket.estimated_completion_date || "待评估" }}，你的日期草稿为
+            {{ startEstimate || "待评估" }}。请选择后再受理。
+          </p>
+          <div class="sd-flex">
+            <button
+              type="button"
+              class="sd-button"
+              @click="resolveEstimateConflict('start', false)"
+            >
+              使用最新排期
+            </button>
+            <button
+              type="button"
+              class="sd-button"
+              @click="resolveEstimateConflict('start', true)"
+            >
+              确认采用我的改期
+            </button>
+          </div>
+        </div>
         <label for="status-reason"
           >{{ actionLabels[selectedAction] }} ·
           {{
@@ -458,7 +541,10 @@ async function getFile(f: Attachment) {
           分析范围；顾问补充后继续跟进。可在说明中补充目标系统、对象或单据范围。
         </p>
         <div class="sd-flex">
-          <button class="sd-button sd-primary" :disabled="busy || conflict">
+          <button
+            class="sd-button sd-primary"
+            :disabled="busy || conflict || startEstimateConflict"
+          >
             {{ busy ? "正在保存…" : "确认" + actionLabels[selectedAction] }}
           </button>
           <button
@@ -643,6 +729,31 @@ async function getFile(f: Attachment) {
               <small class="sd-muted"
                 >留空表示待评估。日期代表可提交验收的时间。</small
               >
+              <div v-if="estimateConflict" class="sd-error" role="alert">
+                <p>
+                  排期已更新为
+                  {{
+                    ticket.estimated_completion_date || "待评估"
+                  }}，你的日期草稿为
+                  {{ estimateDate || "待评估" }}。请选择后再保存。
+                </p>
+                <div class="sd-flex">
+                  <button
+                    type="button"
+                    class="sd-button"
+                    @click="resolveEstimateConflict('schedule', false)"
+                  >
+                    使用最新排期
+                  </button>
+                  <button
+                    type="button"
+                    class="sd-button"
+                    @click="resolveEstimateConflict('schedule', true)"
+                  >
+                    确认采用我的改期
+                  </button>
+                </div>
+              </div>
               <label for="estimate-reason"
                 >{{
                   scheduleReasonRequired ? "调整原因（必填）" : "说明（选填）"
@@ -661,6 +772,7 @@ async function getFile(f: Attachment) {
                   :disabled="
                     busy ||
                     conflict ||
+                    estimateConflict ||
                     (estimateDate ===
                       (ticket.estimated_completion_date || '') &&
                       !ticket.estimate_needs_review)

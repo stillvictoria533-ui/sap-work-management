@@ -26,7 +26,7 @@ export interface TicketEvent {
   created_at: string;
   attachments: Attachment[];
 }
-export interface Ticket {
+export interface TicketListItem {
   id: number;
   number: string;
   title: string;
@@ -38,7 +38,6 @@ export interface Ticket {
   due_date: string | null;
   estimated_completion_date: string | null;
   estimate_needs_review: boolean;
-  description: string;
   owner_name: string;
   owner_id: number;
   version: number;
@@ -46,6 +45,9 @@ export interface Ticket {
   created_at: string;
   updated_at: string;
   unread: boolean;
+}
+export interface Ticket extends TicketListItem {
+  description: string;
   events?: TicketEvent[];
   expedite_requests?: ExpediteRequest[];
   ai_followup?: { enabled: boolean; state: string; message: string };
@@ -67,11 +69,11 @@ export interface Page<T> {
   previous: string | null;
   results: T[];
 }
-export interface TicketPage extends Page<Ticket> {
+export interface TicketPage extends Page<TicketListItem> {
   tab_counts: { total: number; active: number; unread_tickets: number };
 }
 export type CalendarTicket = Pick<
-  Ticket,
+  TicketListItem,
   | "id"
   | "number"
   | "title"

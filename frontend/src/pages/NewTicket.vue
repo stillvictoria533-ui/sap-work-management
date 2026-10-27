@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, onUnmounted } from "vue";
 import { useRouter, onBeforeRouteLeave } from "vue-router";
 import { post, ApiError } from "../api";
 import { refreshStats } from "../state";
@@ -29,6 +29,10 @@ const router = useRouter(),
   existingTicket = ref(0),
   saved = ref(false),
   requestKey = crypto.randomUUID();
+let active = true;
+onUnmounted(() => {
+  active = false;
+});
 onBeforeRouteLeave(
   () =>
     saved.value ||
@@ -46,16 +50,18 @@ async function submit() {
     for (const [k, v] of Object.entries(form)) if (v) data.set(k, v);
     files.value.forEach((f) => data.append("files", f));
     const ticket = await post<Ticket>("/tickets", data);
+    void refreshStats().catch(() => {});
+    if (!active) return;
     saved.value = true;
-    void refreshStats();
     await router.push("/tickets/" + ticket.id);
   } catch (e) {
+    if (!active) return;
     error.value = (e as Error).message;
     if (e instanceof ApiError && e.status === 409) {
       existingTicket.value = Number(e.data.ticket_id) || 0;
     }
   } finally {
-    busy.value = false;
+    if (active) busy.value = false;
   }
 }
 </script>

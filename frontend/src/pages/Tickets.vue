@@ -13,7 +13,7 @@ import {
   priorities,
   modules,
   dateTime,
-  type Ticket,
+  type TicketListItem,
   type Page,
   type User,
 } from "../types";
@@ -22,7 +22,7 @@ import Status from "../components/Status.vue";
 import ScheduleDate from "../components/ScheduleDate.vue";
 const route = useRoute(),
   router = useRouter(),
-  items = ref<Ticket[]>([]),
+  items = ref<TicketListItem[]>([]),
   count = ref(0),
   people = ref<User[]>([]),
   loading = ref(false),
@@ -173,7 +173,9 @@ async function load() {
   loading.value = true;
   error.value = "";
   try {
-    const data = await api<Page<Ticket>>("/tickets?" + requestParams.value);
+    const data = await api<Page<TicketListItem>>(
+      "/tickets?" + requestParams.value,
+    );
     if (id === sequence) {
       items.value = data.results;
       count.value = data.count;

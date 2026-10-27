@@ -1,7 +1,56 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mountPage, flush } from "./page-harness.ts";
+import { mountPage, flush, deferred } from "./page-harness.ts";
 import { ApiError } from "../src/api.ts";
+
+test("a delayed successful creation after leaving the page does not navigate away from the current page", async (t) => {
+  const previousWindow = globalThis.window;
+  globalThis.window = { confirm: () => true } as any;
+  t.after(() => {
+    globalThis.window = previousWindow;
+  });
+  const response = deferred<any>();
+  let statsRefreshes = 0;
+  const page = await mountPage(
+    "NewTicket",
+    {
+      "../api": { ApiError, post: async () => response.promise },
+      "../state": {
+        refreshStats: async () => {
+          statsRefreshes++;
+        },
+      },
+    },
+    "/tickets/new",
+  );
+  t.after(page.unmount);
+  const s = page.state();
+  s.form.title = "Submitted while active";
+  s.form.description = "A late response";
+  const pending = s.submit();
+  await page.router.push("/tickets");
+  await flush();
+  response.resolve({ id: 42 });
+  await pending;
+  assert.equal(page.router.currentRoute.value.path, "/tickets");
+  assert.equal(statsRefreshes, 1);
+});
+
+test("a creation completed on the active page still opens the new ticket", async (t) => {
+  const page = await mountPage(
+    "NewTicket",
+    {
+      "../api": { ApiError, post: async () => ({ id: 42 }) },
+      "../state": { refreshStats: async () => {} },
+    },
+    "/tickets/new",
+  );
+  t.after(page.unmount);
+  const s = page.state();
+  s.form.title = "Active creation";
+  await s.submit();
+  assert.equal(page.router.currentRoute.value.path, "/tickets/42");
+});
 
 test("a lost create response reuses its key; a content conflict keeps the edited draft and original-ticket link", async (t) => {
   const payloads: FormData[] = [];

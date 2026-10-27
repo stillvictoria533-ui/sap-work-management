@@ -193,3 +193,145 @@ test("a delayed response cannot roll back a newer accepted version of the same t
   s.acceptUpdate(ticket(1, 2));
   assert.equal(s.ticket.version, 3);
 });
+
+for (const [initial, latest] of [
+  [null, "2026-12-20"],
+  ["2026-12-10", "2026-12-20"],
+  ["2026-12-10", null],
+]) {
+  test(`refreshing an untouched acceptance date ${initial} -> ${latest} sends no date change`, async (t) => {
+    let current = {
+      ...ticket(1),
+      status: "pending",
+      estimated_completion_date: initial,
+    };
+    const requests: any[] = [];
+    const page = await setup(
+      t,
+      async (_path: string, data: any) => {
+        requests.push(data);
+        return { ...current, status: "in-progress", version: 3 };
+      },
+      async () => ({ ...current }),
+    );
+    const s = page.state();
+    s.selectedAction = "start";
+    s.startEstimate = initial || "";
+    s.reason = "按已有计划受理";
+    current = {
+      ...current,
+      version: 2,
+      estimated_completion_date: latest,
+    };
+    await s.load();
+    await s.changeStatus();
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].version, 2);
+    assert.equal(
+      Object.hasOwn(requests[0], "estimated_completion_date"),
+      false,
+    );
+    assert.equal(s.ticket.estimated_completion_date, latest);
+  });
+}
+
+test("an edited acceptance date needs explicit resolution when another administrator changes the plan", async (t) => {
+  let current = { ...ticket(1), status: "pending" };
+  const requests: any[] = [];
+  const page = await setup(
+    t,
+    async (_path: string, data: any) => {
+      requests.push(data);
+      return {
+        ...current,
+        status: "in-progress",
+        version: 3,
+        estimated_completion_date: data.estimated_completion_date,
+      };
+    },
+    async () => ({ ...current }),
+  );
+  const s = page.state();
+  s.selectedAction = "start";
+  s.startEstimate = "2026-12-25";
+  s.reason = "保留我的调整原因";
+  current = {
+    ...current,
+    version: 2,
+    estimated_completion_date: "2026-12-20" as any,
+  };
+  await s.load();
+  await s.changeStatus();
+  assert.equal(requests.length, 0);
+  assert.equal(s.startEstimate, "2026-12-25");
+  assert.equal(s.reason, "保留我的调整原因");
+  s.resolveEstimateConflict("start", true);
+  await s.changeStatus();
+  assert.equal(requests[0].estimated_completion_date, "2026-12-25");
+  assert.equal(requests[0].version, 2);
+});
+
+test("an untouched schedule editor follows refresh; an edited one cannot overwrite a changed plan without confirmation", async (t) => {
+  let current = {
+    ...ticket(1),
+    estimated_completion_date: "2026-12-10" as any,
+  };
+  const requests: any[] = [];
+  const page = await setup(
+    t,
+    async (_path: string, data: any) => {
+      requests.push(data);
+      return current;
+    },
+    async () => ({ ...current }),
+  );
+  const s = page.state();
+  s.editSchedule();
+  s.estimateReason = "说明保留";
+  current = { ...current, version: 2, estimated_completion_date: "2026-12-20" };
+  await s.load();
+  assert.equal(s.estimateDate, "2026-12-20");
+  assert.equal(s.estimateReason, "说明保留");
+  s.estimateDate = "2026-12-25";
+  current = { ...current, version: 3, estimated_completion_date: "2026-12-22" };
+  await s.load();
+  await s.saveSchedule();
+  assert.equal(requests.length, 0);
+  assert.equal(s.estimateDate, "2026-12-25");
+  s.resolveEstimateConflict("schedule", false);
+  assert.equal(s.estimateDate, "2026-12-22");
+  assert.equal(s.estimateConflict, false);
+});
+
+test("explicitly clearing a changed acceptance date remains possible after confirmation", async (t) => {
+  let current = {
+    ...ticket(1),
+    status: "pending",
+    estimated_completion_date: "2026-12-10" as any,
+  };
+  const requests: any[] = [];
+  const page = await setup(
+    t,
+    async (_path: string, data: any) => {
+      requests.push(data);
+      return {
+        ...current,
+        status: "in-progress",
+        version: 3,
+        estimated_completion_date: data.estimated_completion_date,
+      };
+    },
+    async () => ({ ...current }),
+  );
+  const s = page.state();
+  s.selectAction("start");
+  s.startEstimate = "";
+  s.reason = "明确清空已有排期";
+  current = { ...current, version: 2, estimated_completion_date: "2026-12-20" };
+  await s.load();
+  await s.changeStatus();
+  assert.equal(requests.length, 0);
+  s.resolveEstimateConflict("start", true);
+  await s.changeStatus();
+  assert.equal(requests[0].estimated_completion_date, null);
+});

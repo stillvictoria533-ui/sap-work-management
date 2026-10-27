@@ -140,8 +140,8 @@ class TicketDetail(APIView):
 
 class TicketVersion(APIView):
     def get(self, request, pk):
-        ticket = get_object_or_404(scoped_tickets(request.user), pk=pk)
-        return Response({'id': ticket.pk, 'version': ticket.version})
+        ticket = get_object_or_404(scoped_tickets(request.user).values('id', 'version'), pk=pk)
+        return Response(ticket)
 
 class DevelopmentCalendar(APIView):
     permission_classes = [ActiveAccount]

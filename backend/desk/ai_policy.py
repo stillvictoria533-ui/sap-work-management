@@ -74,6 +74,121 @@ def document_keys(text, objects):
     return result
 
 
+def same_value(value, original, field):
+    # Preserve the existing document/material ID padding allowance. Organization,
+    # fiscal-year and language constraints must match the accepted text exactly.
+    return value == original or (field in {'MATNR', 'EBELN', 'VBELN', 'BELNR'}
+        and value.isascii() and value.isdigit()
+        and original.isascii() and original.isdigit() and value.lstrip('0') == original.lstrip('0'))
+
+
+def object_keys(obj, keys):
+    fields = set(DATA_TABLES[obj][2].split())
+    return {field: values for field, values in keys.items() if field in fields}
+
+
+def single_object(keys):
+    """One value per field has only one possible relationship; never zip lists."""
+    if any(len(values) != 1 for values in keys.values()):
+        return None
+    return {field: values[0] for field, values in keys.items()}
+
+
+def primary_data_key(obj):
+    return next(field for field in ('MATNR', 'EBELN', 'VBELN', 'BELNR') if field in DATA_TABLES[obj][1].split())
+
+
+def document_objects(text, obj, objects):
+    keys = object_keys(obj, document_keys(text, objects))
+    singleton = single_object(keys)
+    if singleton is not None:
+        return [singleton]
+    primary = primary_data_key(obj)
+    if set(keys) == {primary}:
+        return [{primary: value} for value in keys[primary]]
+    records = []
+    # Explicitly labelled records on separate lines/clauses preserve relations.
+    # Partial records retain missing keys; prose/list order conveys no authority.
+    for part in re.split(r'[\r\n;；。]+', text):
+        part_keys = object_keys(obj, document_keys(part, objects))
+        if not part_keys:
+            continue
+        record = single_object(part_keys)
+        if record is None or primary not in record:
+            return []
+        if record not in records:
+            records.append(record)
+        if len(records) > 20:
+            return []
+    # Every extracted value must belong to a record; never discard unpaired
+    # qualifiers, including a shared header that could apply to only one row.
+    covered = {field: {row[field] for row in records if field in row} for field in keys}
+    return records if all(covered[field] == set(values) for field, values in keys.items()) else []
+
+
+def accepted_data_objects(scope, obj):
+    if scope.get('schema') == 'ticket-read-scope/v1':
+        # Old flattened multi-object scopes lack evidence of any pairing.
+        keys = object_keys(obj, scope.get('document_keys', {}))
+        if set(keys) == {primary_data_key(obj)}:
+            return [{primary_data_key(obj): value} for value in keys[primary_data_key(obj)]]
+        singleton = single_object(keys)
+        return [singleton] if singleton is not None else []
+    records = scope.get('data_objects', {}).get(obj, [])
+    return records if isinstance(records, list) and all(isinstance(row, dict) for row in records) else []
+
+
+def upgrade_data_scope(scope, original=None):
+    if scope.get('schema') == 'ticket-read-scope/v1':
+        recovered = bool(original and original.get('source_hash') == scope.get('source_hash')
+                         and original.get('accepted_event_id') == scope.get('accepted_event_id'))
+        records = {}
+        for obj in scope['objects']:
+            if obj not in DATA_TABLES:
+                continue
+            records[obj] = accepted_data_objects(scope, obj)
+            if not records[obj] and recovered:
+                source_records = original['data_objects'].get(obj, [])
+                if all(all(allowed_value(value, scope, field) for field, value in row.items()) for row in source_records):
+                    records[obj] = [dict(row) for row in source_records]
+        scope['data_objects'] = records
+        scope['schema'] = 'ticket-read-scope/v2'
+
+
+def complete_data_objects(scope, text, event_id):
+    """Fill a missing key once on one identified accepted object, never remap it."""
+    for obj in scope.get('objects', []):
+        if obj not in DATA_TABLES:
+            continue
+        records = accepted_data_objects(scope, obj)
+        required = required_data_keys(obj, scope)
+        if not records or all(required <= set(row) for row in records):
+            continue
+        primary = primary_data_key(obj)
+        candidates = document_objects(text, obj, scope['objects'])
+        additions = {}
+        for candidate in candidates:
+            matches = [i for i, row in enumerate(records)
+                       if (len(records) == 1 or primary in candidate)
+                       and all(same_value(candidate[field], value, field) for field, value in row.items() if field in candidate)]
+            if len(matches) != 1:
+                continue
+            i = matches[0]
+            for field in required - set(records[i]):
+                if field in candidate:
+                    additions.setdefault((i, field), []).append(candidate[field])
+        for (i, field), values in additions.items():
+            if not all(same_value(values[0], value, field) for value in values):
+                continue
+            records[i][field] = values[0]
+            known = scope.setdefault('document_keys', {}).setdefault(field, [])
+            if values[0] not in known:
+                known.append(values[0])
+                known.sort()
+            scope.setdefault('key_completion_events', {}).setdefault(field, event_id)
+            scope.setdefault('data_object_completion_events', {}).setdefault(obj, {}).setdefault(str(i), {})[field] = event_id
+
+
 def source_kinds(text, objects):
     result = {}
     labels = {'fm': r'函数(?:模块)?|function(?:\s+module)?|source\s+fm',
@@ -105,9 +220,10 @@ def freeze_scope(system, title, description, acceptance_note, accepted_event_id)
     unresolved = bool(note and not re.fullmatch(
         r'开始处理|(?:(?:DS4|QS4|PS4)\s*)?只读(?:查询|分析)?(?:测试)?', note))
     return {
-        'schema': 'ticket-read-scope/v1', 'accepted_event_id': accepted_event_id,
+        'schema': 'ticket-read-scope/v2', 'accepted_event_id': accepted_event_id,
         'system': system, 'client': SYSTEM_CLIENTS.get(system, ''),
         'objects': sorted(objects)[:100], 'document_keys': keys, 'source_kinds': source_kinds(text, objects),
+        'data_objects': {obj: document_objects(text, obj, objects) for obj in sorted(objects & set(DATA_TABLES))},
         'data_fields': {obj: DATA_TABLES[obj][2].split() for obj in sorted(objects & set(DATA_TABLES))},
         'data_keys': {obj: sorted(required_data_keys(obj, {'document_keys': keys}))
                       for obj in sorted(objects & set(DATA_TABLES))},
@@ -118,16 +234,12 @@ def freeze_scope(system, title, description, acceptance_note, accepted_event_id)
 
 def allowed_value(value, scope, field):
     values = scope.get('document_keys', {}).get(field, [])
-    if value in values:
-        return True
-    return value.isascii() and value.isdigit() and any(
-        original.isascii() and original.isdigit() and value.lstrip('0') == original.lstrip('0')
-        for original in values)
+    return any(same_value(value, original, field) for original in values)
 
 
 def validate_plan(plan, scope):
     exact_keys(plan, {'command', 'object'}, {'kind', 'method', 'fields', 'filters', 'rows'})
-    if scope.get('schema') != 'ticket-read-scope/v1' or scope.get('restriction_unresolved'):
+    if scope.get('schema') not in {'ticket-read-scope/v1', 'ticket-read-scope/v2'} or scope.get('restriction_unresolved'):
         raise PolicyError('scope_unresolved')
     system = scope.get('system')
     if system not in SYSTEM_CLIENTS or scope.get('client') != SYSTEM_CLIENTS[system]:
@@ -176,8 +288,13 @@ def validate_plan(plan, scope):
                 raise PolicyError('document_outside_scope')
             seen.add(field)
             clean_filters.append({'field': field, 'value': value})
-        if not required_data_keys(obj, scope) <= seen:
+        required = required_data_keys(obj, scope)
+        if not required <= seen:
             raise PolicyError('required_filters_missing')
+        if not any(required <= set(record) and all(
+                item['field'] in record and same_value(item['value'], record[item['field']], item['field']) for item in clean_filters)
+                for record in accepted_data_objects(scope, obj)):
+            raise PolicyError('business_object_outside_scope')
         if isinstance(rows, bool) or not isinstance(rows, int) or not 1 <= rows <= 50:
             raise PolicyError('bounded_key_required')
         result.update(fields=fields, filters=sorted(clean_filters, key=lambda item: item['field']), rows=rows)
