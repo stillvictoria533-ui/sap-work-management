@@ -1,0 +1,130 @@
+diff --git a/frontend/src/pages/TicketDetail.vue b/frontend/src/pages/TicketDetail.vue
+index c83f990..5d660a4 100644
+--- a/frontend/src/pages/TicketDetail.vue
++++ b/frontend/src/pages/TicketDetail.vue
+@@ -428,19 +428,12 @@ async function getFile(f: Attachment) {
+-  <RouterLink
+-    class="sd-quiet sd-breadcrumb"
+-    :to="
+-      calendarReturn || {
+-        path: '/tickets',
+-        query: ticketListQuery(readTicketListState(route.query)),
+-      }
+-    "
+-    ><Icon name="arrow-left" />{{
+-      calendarReturn ? "返回日历" : "返回列表"
+-    }}</RouterLink
+-  >
+-  <p v-if="loading" role="status" class="sd-muted">正在加载…</p>
+-  <div class="sd-flex" v-if="ticket">
+-    <button class="sd-button" :disabled="busy || loading" @click="load">
+-      刷新工单（保留草稿）
+-    </button>
+-    <span v-if="newVersion > ticket.version" role="status" class="sd-small"
+-      >工单有新回复或变更，刷新后查看。</span
++  <div class="sd-detail-toolbar">
++    <RouterLink
++      class="sd-quiet sd-breadcrumb"
++      :to="
++        calendarReturn || {
++          path: '/tickets',
++          query: ticketListQuery(readTicketListState(route.query)),
++        }
++      "
++      ><Icon name="arrow-left" />{{
++        calendarReturn ? "返回日历" : "返回列表"
++      }}</RouterLink
+@@ -447,0 +441,15 @@ async function getFile(f: Attachment) {
++    <div v-if="ticket" class="sd-detail-refresh-group">
++      <span id="sd-refresh-hint" class="sd-small sd-muted">保留草稿</span>
++      <button
++        type="button"
++        class="sd-quiet sd-detail-refresh"
++        :disabled="busy || loading"
++        :aria-busy="loading"
++        aria-describedby="sd-refresh-hint"
++        title="刷新工单，保留当前页面未提交的草稿"
++        @click="load"
++      >
++        <Icon name="refresh-cw" :class="{ 'is-loading': loading }" />
++        {{ loading ? "刷新中…" : "刷新工单" }}
++      </button>
++    </div>
+@@ -448,0 +457,8 @@ async function getFile(f: Attachment) {
++  <p v-if="loading && !ticket" role="status" class="sd-muted">正在加载…</p>
++  <p
++    v-if="ticket && newVersion > ticket.version"
++    role="status"
++    class="sd-detail-update"
++  >
++    <Icon name="message-circle" />工单有新回复或变更，刷新后查看。
++  </p>
+@@ -831,0 +848,68 @@ async function getFile(f: Attachment) {
++#sap-desk-design .sd-detail-toolbar {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  flex-wrap: wrap;
++  gap: 8px 16px;
++  margin-bottom: 22px;
++}
++#sap-desk-design .sd-detail-toolbar .sd-breadcrumb {
++  margin-bottom: 0;
++  white-space: nowrap;
++}
++#sap-desk-design .sd-detail-refresh-group {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  margin-left: auto;
++}
++#sap-desk-design .sd-detail-refresh {
++  justify-content: center;
++  min-width: 96px;
++  min-height: 36px;
++  padding: 6px 10px;
++  border: 1px solid var(--sd-line);
++  border-radius: 6px;
++  background: var(--sd-paper);
++  white-space: nowrap;
++  transition:
++    background 0.16s,
++    color 0.16s;
++}
++#sap-desk-design .sd-detail-refresh:hover:not(:disabled) {
++  color: var(--sd-ink);
++  background: var(--sd-tint);
++}
++#sap-desk-design .sd-detail-refresh svg {
++  width: 14px;
++  height: 14px;
++}
++#sap-desk-design .sd-detail-refresh .is-loading {
++  animation: sd-refresh-spin 0.9s linear infinite;
++}
++#sap-desk-design .sd-detail-update {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  margin-bottom: 18px;
++  padding: 10px 12px;
++  border-radius: 6px;
++  background: var(--sd-tint);
++  color: var(--sd-ink);
++  font-size: 12px;
++}
++@keyframes sd-refresh-spin {
++  to {
++    transform: rotate(360deg);
++  }
++}
++@media (max-width: 650px) {
++  #sap-desk-design .sd-detail-refresh {
++    min-height: 40px;
++  }
++}
++@media (prefers-reduced-motion: reduce) {
++  #sap-desk-design .sd-detail-refresh .is-loading {
++    animation: none;
++  }
++}

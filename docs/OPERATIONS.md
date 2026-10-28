@@ -73,3 +73,5 @@ python3 /opt/sapdesk/scripts/restore_drill.py drill '/opt/sapdesk/backups/daily/
 运行保障发布记录：[2026-10-27 AI 监控、附件容量和本机恢复改进](reviews/operations-resilience/README.md)，上线代码 `62eb1fc`。
 
 AI 对象类型与受阻原因发布记录：[2026-10-27 受控继续跟进](reviews/ai-object-type-followup/README.md)，上线代码 `75c9264`。
+
+工单详情刷新按钮布局发布记录：[2026-10-28 刷新控件与草稿提示优化](reviews/ticket-refresh-layout/README.md)，上线代码 `67f4803`，仅更新 web 服务；审阅与公网 30 个静态资源逐文件一致，GitHub `main` 已读回确认。

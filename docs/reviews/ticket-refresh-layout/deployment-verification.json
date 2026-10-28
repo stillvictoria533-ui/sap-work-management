@@ -1,0 +1,70 @@
+{
+  "status": "published_and_code_synchronized",
+  "timezone": "Asia/Shanghai",
+  "user_confirmed_release": true,
+  "approved_base_commit": "c0c8c6b7ac99bfba759fa43491cccaef2ebc7aa9",
+  "approved_component_sha256": "630683bacb67dd29b35788b16980d8dd3d62ce744eefebe89d39f2e15c00e87f",
+  "published_code_commit": "67f4803ecbd47cdd5892de791a404ba84c561af8",
+  "server_verified_at_beijing": "2026-10-28T08:48:02.201256+08:00",
+  "github": {
+    "repository": "stillvictoria533-ui/sap-work-management",
+    "branch": "main",
+    "application_commit": "67f4803ecbd47cdd5892de791a404ba84c561af8",
+    "remote_commit_verified": true,
+    "workflow_run_id": 40611238267,
+    "workflow_status": "completed",
+    "workflow_conclusion": "success",
+    "workflow_url": "https://github.com/stillvictoria533-ui/sap-work-management/actions/runs/40611238267"
+  },
+  "server": {
+    "approved_source_files_matched": 59,
+    "reviewed_build_files_matched": 30,
+    "public_static_assets_matched": 30,
+    "tls_verified": true,
+    "https_health": "ok",
+    "nginx_config_ok": true,
+    "web": {
+      "web_id": "b1749596787c52ccb5a3ec0d1e734c7b358ba044c54e09acf6e84cd581b7a95e",
+      "web_image": "sha256:3b795881edad01895f084d5981136f43c29fb8f1084aec25247996e5383b9f8e",
+      "web_started_at": "2026-10-28T00:47:35.655490332Z"
+    },
+    "unchanged_services": [
+      "/sapdesk-api-1",
+      "/sapdesk-chat-worker-1",
+      "/sapdesk-worker-1",
+      "/sapdesk-db-1"
+    ],
+    "rollback_source": "/root/sapdesk-ticket-refresh-20261028/backup-source.tar.gz",
+    "rollback_image": "sapdesk-web:before-ticket-refresh-20261028",
+    "old_backup_files_excluded_from_build": [
+      "frontend/src/workspace.css.before-status-colors",
+      "frontend/src/App.vue.before-nav",
+      "frontend/src/product.css.before-nav"
+    ]
+  },
+  "validation": {
+    "frontend_tests_passed": 41,
+    "typescript_and_build": "passed",
+    "browser_widths": [
+      1440,
+      390,
+      320
+    ],
+    "horizontal_overflow": false,
+    "refresh_preserves_reply_and_attachment": true,
+    "refresh_failure_preserves_draft": true,
+    "new_version_notice_and_dismissal": "passed",
+    "reduced_motion": "passed",
+    "public_login_page": "passed",
+    "public_browser_console_errors": 0
+  },
+  "scope": {
+    "application_files": [
+      "frontend/src/pages/TicketDetail.vue"
+    ],
+    "changes": "Template and styles only; refresh and draft-protection logic unchanged.",
+    "backend_restarted": false,
+    "database_migrations": false,
+    "production_ticket_writes": false
+  }
+}
