@@ -1,0 +1,73 @@
+{
+  "status": "published_and_code_synchronized",
+  "timezone": "Asia/Shanghai",
+  "approved_code_commit": "92189fcbdf23e7d48710b1c00c83f867a81f295e",
+  "server_verified_at_beijing": "2026-10-30T13:46:55.674492+08:00",
+  "runtime_activated_at_beijing": "2026-10-30T13:47:40.864460+08:00",
+  "github": {
+    "repository": "stillvictoria533-ui/sap-work-management",
+    "branch": "main",
+    "application_commit": "92189fcbdf23e7d48710b1c00c83f867a81f295e",
+    "remote_commit_verified": true,
+    "verified_remote_code_commit": "92189fcbdf23e7d48710b1c00c83f867a81f295e",
+    "workflow_run_id": 41010543577,
+    "workflow_conclusion": "success",
+    "workflow_url": "https://github.com/stillvictoria533-ui/sap-work-management/actions/runs/41010543577"
+  },
+  "server": {
+    "https_health": "ok",
+    "application_services": "healthy",
+    "database_and_web_container_identity_unchanged": true,
+    "running_image_backend_files_verified": {
+      "api": 84,
+      "worker": 84,
+      "chat_worker": 84
+    },
+    "server_source_files_updated": 10,
+    "backup_verified": true,
+    "rollback_source_images_and_backup_retained": true,
+    "database_migration_required": false,
+    "migration_check": "no pending migrations",
+    "deployment_check": "passed",
+    "synthetic_smoke": {
+      "raw_model_and_unbound_plans_rejected": true,
+      "unique_type_bound_without_expanding_objects": true,
+      "wrong_type_object_and_business_data_rejected": true,
+      "metadata_cannot_publish_business_reply": true,
+      "original_eight_query_budget_enforced": true,
+      "reply_idempotent_and_notification_once": true,
+      "synthetic_records_rolled_back": true,
+      "sap_calls": 0,
+      "external_notifications": 0
+    },
+    "existing_server_operations_document_preserved": true
+  },
+  "runtime": {
+    "version": "source-binding-92189fc",
+    "verified_files": 12,
+    "loaded": true,
+    "shadow": "SHADOW_EMPTY",
+    "last_scan": "EMPTY",
+    "interval_seconds": 60,
+    "legacy_heartbeat": "PAUSED",
+    "launchagent_configuration_preserved": true,
+    "offline_protocol_smoke": {
+      "function_alias_normalized": true,
+      "unbound_type_rejected": true,
+      "exact_metadata_args": true,
+      "sap_calls": 0
+    }
+  },
+  "predeployment_tests": {
+    "unique_tests_passed": 354,
+    "postgresql_tests": 243,
+    "postgresql_skipped": 0,
+    "scripts_including_separate_cli_tests": 91,
+    "company_signature_and_ledger_tests": 13,
+    "connector_and_readiness_tests": 7
+  },
+  "limits": [
+    "No live SAP query was issued by deployment verification.",
+    "Existing exhausted or expired ticket rounds were not reset."
+  ]
+}

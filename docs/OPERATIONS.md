@@ -75,3 +75,5 @@ python3 /opt/sapdesk/scripts/restore_drill.py drill '/opt/sapdesk/backups/daily/
 AI 对象类型与受阻原因发布记录：[2026-10-27 受控继续跟进](reviews/ai-object-type-followup/README.md)，上线代码 `75c9264`。
 
 工单详情刷新按钮布局发布记录：[2026-10-28 刷新控件与草稿提示优化](reviews/ticket-refresh-layout/README.md)，上线代码 `67f4803`，仅更新 web 服务；审阅与公网 30 个静态资源逐文件一致，GitHub `main` 已读回确认。
+
+AI 协议与源码类型绑定发布记录：[2026-10-30 模型输出协议与源码类型绑定修复](reviews/ai-plan-source-binding/README.md)，上线代码 `92189fc`；服务端、Mac 运行包、生产事务回滚验证及 GitHub 同步均已核实。
