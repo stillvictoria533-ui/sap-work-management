@@ -35,6 +35,15 @@ KEY_LABELS = {
     'GJAHR': ('会计年度', '年度', 'GJAHR'), 'SPRAS': ('语言代码', 'SPRAS'),
 }
 
+# Executor-only object identity checks, never model-selectable business tables.
+# Each lookup is one normal, signed/identity-checked data read with an exact key.
+SOURCE_TYPE_TABLES = {
+    'DD02L': ('TABNAME', ('TABNAME',), 'table'),
+    'TRDIR': ('NAME', ('NAME',), 'prog'),
+    'TFDIR': ('FUNCNAME', ('FUNCNAME',), 'fm'),
+    'SEOCLASS': ('CLSNAME', ('CLSNAME', 'CLSTYPE'), 'class'),
+}
+
 
 class PolicyError(ValueError):
     pass
@@ -176,6 +185,16 @@ def recover_original_source_kinds(scope, original):
             'source': 'original_accepted_material', 'accepted_event_id': scope['accepted_event_id']}
 
 
+def recover_source_type_objects(scope, original):
+    """Upgrade old scopes only from the same, unchanged accepted title."""
+    if (scope.get('source_hash') != original.get('source_hash')
+            or scope.get('accepted_event_id') != original.get('accepted_event_id')
+            or scope.get('system') != original.get('system') or scope.get('client') != original.get('client')
+            or scope.get('restriction_unresolved') or original.get('restriction_unresolved')):
+        return
+    scope['source_type_objects'] = [obj for obj in original['source_type_objects'] if obj in scope['objects']]
+
+
 def complete_data_objects(scope, text, event_id):
     """Fill a missing key once on one identified accepted object, never remap it."""
     for obj in scope.get('objects', []):
@@ -260,6 +279,10 @@ def freeze_scope(system, title, description, acceptance_note, accepted_event_id)
         'schema': 'ticket-read-scope/v2', 'accepted_event_id': accepted_event_id,
         'system': system, 'client': SYSTEM_CLIENTS.get(system, ''),
         'objects': sorted(objects)[:100], 'document_keys': keys, 'source_kinds': source_kinds(text, objects),
+        # An untyped target must be named in the original title. JSON parameter
+        # names, returned identifiers and follow-up text cannot add candidates.
+        'source_type_objects': sorted(obj for obj in objects - set(DATA_TABLES)
+            if re.search(r'(?<![A-Za-z0-9_/$])' + re.escape(obj) + r'(?![A-Za-z0-9_/$])', title))[:100],
         'data_objects': {obj: document_objects(text, obj, objects) for obj in sorted(objects & set(DATA_TABLES))},
         'data_fields': {obj: DATA_TABLES[obj][2].split() for obj in sorted(objects & set(DATA_TABLES))},
         'data_keys': {obj: sorted(required_data_keys(obj, {'document_keys': keys}))
@@ -399,3 +422,48 @@ def cli_arguments(plan, scope):
         for item in plan['filters']:
             args += ['--filter', item['field'] + '=' + item['value']]
     return args
+
+
+def source_type_cli_arguments(plan, scope):
+    """A separate closed protocol; validate_plan deliberately still rejects it."""
+    exact_keys(plan, {'command', 'object', 'table'})
+    obj, table, system = plan['object'], plan['table'], scope.get('system')
+    if (scope.get('schema') not in {'ticket-read-scope/v1', 'ticket-read-scope/v2'}
+            or scope.get('restriction_unresolved')):
+        raise PolicyError('scope_unresolved')
+    if system not in SYSTEM_CLIENTS or scope.get('client') != SYSTEM_CLIENTS[system]:
+        raise PolicyError('system_missing')
+    if (plan['command'] != 'source-type' or not isinstance(obj, str) or not IDENTIFIER.fullmatch(obj)
+            or obj not in scope.get('objects', []) or obj not in scope.get('source_type_objects', []) or obj in DATA_TABLES):
+        raise PolicyError('object_outside_scope')
+    if not isinstance(table, str) or table not in SOURCE_TYPE_TABLES:
+        raise PolicyError('metadata_table_not_allowed')
+    key, fields, _kind = SOURCE_TYPE_TABLES[table]
+    args = ['data', table, '--conn', system, '--fields', ','.join(fields), '--rows', '2', '--filter', key + '=' + obj]
+    if table == 'DD02L': args += ['--filter', 'AS4LOCAL=A']
+    return args
+
+
+def source_type_matches(plan, scope, envelope):
+    source_type_cli_arguments(plan, scope)
+    exact_keys(envelope, {'table', 'row_limit', 'row_count', 'rows', '_evidence'})
+    metadata = envelope['_evidence']
+    content = {key: value for key, value in envelope.items() if key != '_evidence'}
+    table, obj = plan['table'], plan['object']
+    if (not isinstance(metadata, dict) or metadata.get('trust') != 'UNTRUSTED_EVIDENCE'
+            or metadata.get('instructionAuthority') is not False
+            or metadata.get('system') != scope['system'] or metadata.get('client') != scope['client']
+            or metadata.get('command') != 'data' or metadata.get('object') != table
+            or metadata.get('contentSha256') != digest(content)
+            or envelope['table'] != table or type(envelope['row_limit']) is not int or envelope['row_limit'] != 2
+            or not isinstance(envelope['rows'], list) or len(envelope['rows']) > 2
+            or type(envelope['row_count']) is not int or envelope['row_count'] != len(envelope['rows'])):
+        raise PolicyError('metadata_evidence_invalid')
+    key, fields, kind = SOURCE_TYPE_TABLES[table]
+    matches = []
+    for row in envelope['rows']:
+        exact_keys(row, set(fields))
+        if row[key] != obj or any(not isinstance(value, str) for value in row.values()):
+            raise PolicyError('metadata_evidence_invalid')
+        matches.append('interface' if table == 'SEOCLASS' and row['CLSTYPE'] == '1' else kind)
+    return matches

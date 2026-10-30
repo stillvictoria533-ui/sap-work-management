@@ -13,7 +13,8 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'backend'))
-from desk.ai_policy import MAX_QUERIES, MAX_RESULT_BYTES, PolicyError, canonical, cli_arguments, exact_keys, validate_plan
+from desk.ai_policy import (MAX_QUERIES, MAX_RESULT_BYTES, SOURCE_TYPE_TABLES, PolicyError, canonical,
+    cli_arguments, exact_keys, source_type_cli_arguments, source_type_matches, validate_plan)
 from ai_ticket_model import CodexPlanner, WorkerError, run_bounded, stop_children
 
 REASONS = {'sap_unavailable', 'authorization_missing', 'context_incomplete', 'evidence_incomplete', 'runtime_error', 'time_limit'}
@@ -40,7 +41,9 @@ class SAPReader:
 
     def __call__(self, reserved):
         plan, scope = reserved['plan'], reserved['scope']
-        args = cli_arguments(plan, scope)  # independent revalidation before signing/execution
+        metadata_read = plan.get('command') == 'source-type'
+        # Metadata has its own executor-only closed plan, never the model's data policy.
+        args = source_type_cli_arguments(plan, scope) if metadata_read else cli_arguments(plan, scope)
         request = {'workspace': self.workspace, 'args': args, 'approved_user': self.approved_user}
         try:
             if datetime.fromisoformat(reserved['deadline_at']) <= datetime.now(timezone.utc):
@@ -53,10 +56,17 @@ class SAPReader:
             if len(raw.encode()) > MAX_RESULT_BYTES: raise WorkerError('evidence_incomplete')
             metadata = envelope.get('_evidence', {})
             if (metadata.get('system') != scope['system'] or metadata.get('client') != scope['client']
-                    or metadata.get('command') != plan['command'] or metadata.get('object') != plan['object']
+                    or metadata.get('command') != ('data' if metadata_read else plan['command'])
+                    or metadata.get('object') != (plan['table'] if metadata_read else plan['object'])
                     or metadata.get('trust') != 'UNTRUSTED_EVIDENCE' or metadata.get('instructionAuthority') is not False):
                 raise WorkerError('evidence_incomplete')
             result = {key: metadata[key] for key in ['system', 'client', 'object', 'command']}
+            if metadata_read:
+                try:
+                    matches = source_type_matches(plan, scope, envelope)
+                except PolicyError:
+                    raise WorkerError('evidence_incomplete') from None
+                result.update(command='source-type', object=plan['object'], source_type_matches=matches)
             result['sha256'] = hashlib.sha256(raw.encode()).hexdigest()
             return envelope, result
         except (ValueError, TypeError, KeyError):
@@ -81,6 +91,14 @@ def normalize_decision(value):
         for key in set(plan) - set(clean):
             if plan[key] not in ('', [], 0): raise PolicyError('invalid_options')
         if value['body'] or value['reason'] or value['evidence_ids']: raise PolicyError('invalid_query')
+        if plan['command'] == 'source':
+            kind = clean.get('kind', '')
+            if not isinstance(kind, str): raise PolicyError('invalid_source_kind')
+            # Compatibility is a finite semantic translation; it grants no type
+            # and still passes the unchanged source/scope validation afterwards.
+            kind = {'function': 'fm', 'program': 'prog'}.get(kind, kind)
+            if kind not in {'', 'fm', 'prog', 'class'}: raise PolicyError('invalid_source_kind')
+            clean['kind'] = kind
         return {**value, 'plan': clean}
     if value['plan'] is not None: raise PolicyError('unexpected_plan')
     if value['action'] == 'defer':
@@ -108,7 +126,60 @@ class TicketProcessor:
                 last_renewed = started
 
         receipts, observations = {}, []
+        queries_used = lease.get('queries_used', 0)
         scope, decision = {}, None
+
+        def execute_reserved(reserved):
+            nonlocal queries_used
+            # Deduct the transport time before starting any signed read.
+            remaining = min(60, reserved['timeout_seconds']) - (self.monotonic() - reservation_started) - 5
+            try:
+                if remaining <= 0: raise WorkerError('time_limit')
+                envelope, result = self.reader({**reserved, 'timeout_seconds': remaining})
+            except WorkerError as error:
+                pulse(True)
+                self.gateway('query_complete', **auth, query_id=reserved['query_id'], result=None,
+                    error=error.code if error.code in REASONS - {'context_incomplete'} else 'runtime_error')
+                raise
+            pulse()
+            receipt = self.gateway('query_complete', **auth, query_id=reserved['query_id'], result=result, error='')
+            queries_used += 1
+            return envelope, receipt
+
+        def resolve_source_type(obj):
+            nonlocal scope, queries_used, reservation_started
+            # Only an original-title candidate can reach the fixed lookup route.
+            source_type_cli_arguments({'command': 'source-type', 'object': obj, 'table': 'DD02L'}, scope)
+            for _ in SOURCE_TYPE_TABLES:
+                pulse(True)
+                if (deadline - self.now()).total_seconds() < 300: raise WorkerError('time_limit')
+                reservation_started = self.monotonic()
+                reserved = self.gateway('source_type_reserve', **auth, request_key=str(uuid.uuid4()), object=obj)
+                if reserved.get('outcome') != 'reserved': raise WorkerError('evidence_incomplete')
+                _, receipt = execute_reserved(reserved)
+                if receipt.get('outcome') != 'source_type_checked': raise WorkerError('evidence_incomplete')
+                if receipt.get('queries_used') != queries_used: raise WorkerError('evidence_incomplete')
+                binding = receipt.get('binding')
+                if binding == 'bound':
+                    resolved = receipt['read_scope']
+                    kinds = resolved.get('source_kinds', {}).get(obj)
+                    if not isinstance(kinds, list) or len(kinds) != 1 or kinds[0] not in {'fm', 'prog', 'class'}:
+                        raise WorkerError('evidence_incomplete')
+                    # The gateway may fill this one type, never change the target,
+                    # business keys, system, source hash, or other source types.
+                    previous = {k: v for k, v in scope.items() if k not in {'source_kinds', 'source_kind_bindings'}}
+                    current = {k: v for k, v in resolved.items() if k not in {'source_kinds', 'source_kind_bindings'}}
+                    expected_kinds = {**scope.get('source_kinds', {}), obj: kinds}
+                    if previous != current or resolved.get('source_kinds') != expected_kinds:
+                        raise WorkerError('evidence_incomplete')
+                    scope = resolved
+                    return
+                if binding in {'ambiguous', 'unresolved'}:
+                    raise WorkerError('authorization_missing', 'source_type_ambiguous' if binding == 'ambiguous' else 'source_type_missing')
+                if binding != 'pending': raise WorkerError('evidence_incomplete')
+            raise WorkerError('evidence_incomplete')
+
+        reservation_started = self.monotonic()
         try:
             scope = lease['read_scope']
             if scope.get('restriction_unresolved'): raise WorkerError('context_incomplete')
@@ -118,31 +189,24 @@ class TicketProcessor:
                 # observations enter the model. Never pass the lease or transport.
                 decision = normalize_decision(self.planner({
                     'untrusted_ticket': lease['context'], 'read_scope': scope,
-                    'observations': observations, 'queries_remaining': max(0, MAX_QUERIES - lease.get('queries_used', 0) - len(observations)),
+                    'observations': observations, 'queries_remaining': max(0, MAX_QUERIES - queries_used),
                 }, pulse))
                 pulse(True)
                 if decision['action'] == 'query':
                     if (deadline - self.now()).total_seconds() < 300: raise WorkerError('time_limit')
-                    plan = validate_plan(decision['plan'], scope)
+                    proposed = decision['plan']
+                    if proposed.get('command') == 'source' and not scope.get('source_kinds', {}).get(proposed['object']):
+                        if proposed['object'] in scope.get('objects', []) and proposed['object'] not in scope.get('source_type_objects', []):
+                            raise WorkerError('authorization_missing', 'source_type_missing')
+                        resolve_source_type(proposed['object'])
+                        if not proposed.get('kind'):
+                            proposed = {**proposed, 'kind': scope['source_kinds'][proposed['object']][0]}
+                    plan = validate_plan(proposed, scope)
                     reservation_started = self.monotonic()
                     reserved = self.gateway('query_reserve', **auth, request_key=str(uuid.uuid4()), plan=plan)
                     if reserved.get('outcome') != 'reserved': raise WorkerError('evidence_incomplete')
                     # Use the server-normalized plan, never the original model JSON.
-                    try:
-                        # Deduct the full transport duration using the local monotonic
-                        # clock. A late reservation response cannot start a stale read,
-                        # even if the Mac and server wall clocks differ.
-                        remaining = min(60, reserved['timeout_seconds']) - (self.monotonic() - reservation_started) - 5
-                        if remaining <= 0: raise WorkerError('time_limit')
-                        reserved = {**reserved, 'timeout_seconds': remaining}
-                        envelope, result = self.reader(reserved)
-                    except WorkerError as error:
-                        pulse(True)
-                        self.gateway('query_complete', **auth, query_id=reserved['query_id'], result=None,
-                            error=error.code if error.code in REASONS - {'context_incomplete'} else 'runtime_error')
-                        raise
-                    pulse()
-                    receipt = self.gateway('query_complete', **auth, query_id=reserved['query_id'], result=result, error='')
+                    envelope, receipt = execute_reserved(reserved)
                     if receipt.get('outcome') != 'recorded': raise WorkerError('evidence_incomplete')
                     receipts[reserved['query_id']] = receipt['evidence']
                     observations.append({'evidence_id': reserved['query_id'], 'collected_at': receipt['collected_at'], 'result': envelope})

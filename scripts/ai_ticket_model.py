@@ -28,7 +28,7 @@ PLAN_SCHEMA = {
         'plan': {'anyOf': [{'type': 'null'}, {'type': 'object', 'additionalProperties': False,
             'properties': {
                 'command': {'type': 'string', 'enum': ['ddic', 'source', 'data', 'tcode']},
-                'object': {'type': 'string'}, 'kind': {'type': 'string'}, 'method': {'type': 'string'},
+                'object': {'type': 'string'}, 'kind': {'type': 'string', 'enum': ['', 'fm', 'prog', 'class']}, 'method': {'type': 'string'},
                 'fields': {'type': 'array', 'items': {'type': 'string'}},
                 'filters': {'type': 'array', 'items': {'type': 'object', 'additionalProperties': False,
                     'properties': {'field': {'type': 'string'}, 'value': {'type': 'string'}}, 'required': ['field', 'value']}},

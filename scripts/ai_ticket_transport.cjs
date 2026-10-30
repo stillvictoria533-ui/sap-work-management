@@ -11,6 +11,7 @@ const FIELDS = {
   reply: [['operation', 'run_id', 'lease_token', 'payload'], []],
   defer: [['operation', 'run_id', 'lease_token', 'reason'], ['detail_code']],
   query_reserve: [['operation', 'run_id', 'lease_token', 'request_key', 'plan'], []],
+  source_type_reserve: [['operation', 'run_id', 'lease_token', 'request_key', 'object'], []],
   query_complete: [['operation', 'run_id', 'lease_token', 'query_id', 'result', 'error'], []],
 };
 

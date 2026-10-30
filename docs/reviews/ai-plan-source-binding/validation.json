@@ -1,0 +1,66 @@
+{
+  "status": "verified_waiting_for_release_confirmation",
+  "date": "2026-10-30",
+  "base_commit": "d8546d0dd1cb347442ef0f74c041bf0d41a6c83f",
+  "branch": "codex/ai-plan-source-binding-fix",
+  "checks": {
+    "python_scripts": {
+      "total": 91,
+      "passed": 89,
+      "optional_cli_tests_verified_separately": 2
+    },
+    "codex_cli_loopback": {
+      "total": 2,
+      "passed": 2,
+      "external_model_requests": 0
+    },
+    "django_sqlite": {
+      "total": 243,
+      "passed": 238,
+      "skipped_postgresql_concurrency": 5
+    },
+    "company_signatures_and_ledger": {
+      "total": 13,
+      "passed": 13
+    },
+    "connector_and_readiness": {
+      "total": 7,
+      "passed": 7
+    },
+    "company_production_metadata_plan_parsing": {
+      "total": 4,
+      "passed": 4,
+      "sap_connections": 0
+    },
+    "migrations": "No changes detected",
+    "diff_check": "passed",
+    "django_postgresql": {
+      "total": 243,
+      "passed": 243,
+      "skipped": 0,
+      "backend_files_verified": 84,
+      "production_containers_unchanged": true,
+      "test_containers_removed": true,
+      "temporary_source_and_data_removed": true
+    }
+  },
+  "limits": [
+    "No live SAP verification or production deployment",
+    "Existing exhausted ticket rounds are not automatically reset"
+  ],
+  "files": {
+    "backend/desk/ai.py": "83ffa4aa8c2ba11b27af0bce3078998816a0c253e3ddf08ef7e2c400f47a26a1",
+    "backend/desk/ai_gateway.py": "047428e4a7529011556619cc4e2d86a98157da5368cf355e77d3506e67e1f5d5",
+    "backend/desk/ai_policy.py": "e0c1b32d8877248456ce99d0ee6344ab9d11cd021e2ac51a3189aa30672434cc",
+    "backend/desk/test_ai_source_binding.py": "04b53a3c50f3ead39d061892df044948162802a19c43830ef91552a3e0dd1a7c",
+    "backend/desk/test_ai_source_type.py": "46a8ba5b7e76e33187e1ba0b75780af78d7e3cd751636d88c54c3942a025295c",
+    "docs/AI_TICKET_AUTOMATION.md": "b01ffe7edd5b328da167023ea9770b4d1bece71a9872ed4fce2a658ced369414",
+    "docs/AI_TICKET_PLANNER_PROMPT.md": "f32cb461da3430877dfc8b0a48e757568368c659e6b60446cd8112de61809306",
+    "docs/reviews/ai-plan-source-binding/README.md": "131881a03277e79b8e8ecdb717f8c8d810524a75248d8830501f6b524af5603e",
+    "docs/reviews/ai-plan-source-binding/postgresql-validation.json": "c729c7d04d3ebca8b8287306f637b856ed5bd69e20c21465ad49a0db2ec5332b",
+    "scripts/ai_ticket_model.py": "b197789da5aa7835fb7b200c06483bed0d940e2d9393aaad08f3d1dabf487cbb",
+    "scripts/ai_ticket_transport.cjs": "40561f93eed67ba544492ba052cbcd659f8281bb26e194ca171f7588474a4e21",
+    "scripts/ai_ticket_worker.py": "b9b3ee41cb4f6b3c0502d68b7144559a7c7305862a40cebe09e10ec2dc549788",
+    "tests/test_ai_ticket_protocol.py": "82c9200b7c324c5dac4b6846aeaa60084e7ae91703858bfcac362e52be17e446"
+  }
+}

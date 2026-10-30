@@ -15,7 +15,7 @@ from rest_framework.exceptions import ValidationError
 
 from .models import Audit, Event, Ticket, TicketAIRun, TicketAIQuery, User
 from .services import notify_for_event
-from .ai_policy import (freeze_scope, upgrade_data_scope, recover_original_source_kinds, complete_data_objects, required_data_keys,
+from .ai_policy import (freeze_scope, upgrade_data_scope, recover_original_source_kinds, recover_source_type_objects, complete_data_objects, required_data_keys,
     validate_catalog_attestation, exact_keys, digest, PolicyError, DATA_TABLES, MAX_QUERIES)
 
 SYSTEM_CLIENTS = {'DS4': '110', 'QS4': '120', 'PS4': '100'}
@@ -25,6 +25,7 @@ FAILURE_DETAIL_REASONS = {
     'plan_outside_scope': 'authorization_missing', 'plan_invalid': 'authorization_missing',
     'cli_version_mismatch': 'authorization_missing', 'unexpected_model_event': 'authorization_missing',
     'executor_error': 'runtime_error',
+    'source_type_ambiguous': 'authorization_missing',
 }
 LEASE_DURATION = timedelta(minutes=15)
 TOTAL_DURATION = timedelta(minutes=45)
@@ -53,6 +54,7 @@ def accepted_scope(ticket, accepted):
     if original['restriction_unresolved']:
         scope['restriction_unresolved'] = True
     recover_original_source_kinds(scope, original)
+    recover_source_type_objects(scope, original)
     # Only missing keys on an identified accepted object may be completed.
     # A follow-up cannot replace a bound key, add an object or pair legacy lists.
     if any(required_data_keys(obj, scope) - set(record)
@@ -237,7 +239,7 @@ def run_blocker(ticket, trigger):
         if run.retry_after is None:
             detail = Audit.objects.filter(action='ai_ticket_blocked', target=str(ticket.pk),
                 detail__run_id=str(run.pk)).order_by('-id').values_list('detail__detail_code', flat=True).first()
-            if detail == 'source_type_missing':
+            if detail in {'source_type_missing', 'source_type_ambiguous'}:
                 return run, 'manual_required'
         if run.retry_after and run.retry_after > timezone.now():
             return run, 'retry_wait'
@@ -453,6 +455,8 @@ def publish(run_id, lease_token, payload):
                     status='succeeded', context_version=run.context_version, lease_token=run.lease_token)
             except (ValueError, TicketAIQuery.DoesNotExist):
                 raise ValidationError('SAP 证据必须来自本轮受控查询回执。')
+            if receipt.plan.get('command') == 'source-type':
+                raise ValidationError('源码类型元数据不能代替业务分析证据。')
             if not receipt.result_hash or reference['system'] != ticket.system or reference['system'] != run.accepted_scope.get('system') or reference['client'] != SYSTEM_CLIENTS.get(ticket.system):
                 raise ValidationError('SAP 证据与本轮受理范围不匹配。')
         ticket.version+=1;ticket.updated_at=timezone.now();ticket.save(update_fields=['version','updated_at'])
@@ -476,7 +480,7 @@ def defer(run_id,lease_token,reason,detail_code=''):
             return {'outcome':'skipped','reason':'run_changed'}
         run.status='blocked';run.reason=reason;run.updated_at=now
         run.retry_after = None
-        manual_required = reason == 'time_limit' or run.attempts >= 3 or detail_code == 'source_type_missing'
+        manual_required = reason == 'time_limit' or run.attempts >= 3 or detail_code in {'source_type_missing', 'source_type_ambiguous'}
         if not manual_required:
             delay = RETRY_DELAYS[0 if run.attempts == 1 else 1]
             if run.deadline_at:
@@ -503,6 +507,7 @@ FAILURE_LABELS = {
 }
 FAILURE_DETAIL_LABELS = {
     'source_type_missing': '需要确认对象源码类型',
+    'source_type_ambiguous': '对象源码类型未唯一匹配',
     'source_type_not_authorized': '源码类型不在受理范围',
     'plan_outside_scope': '查询计划超出受理范围', 'plan_invalid': '查询计划未通过安全校验',
     'cli_version_mismatch': 'AI 程序版本不匹配', 'unexpected_model_event': '检测到不允许的模型执行事件',

@@ -284,7 +284,8 @@ class SourceFailureDetailsTests(TestCase):
         if scripts not in sys.path:sys.path.insert(0,scripts)
         self.admin=User.objects.create_user(username='detail-admin@test.invalid',email='detail-admin@test.invalid',name='管理员',role='admin')
         self.owner=User.objects.create_user(username='detail-owner@test.invalid',email='detail-owner@test.invalid',name='顾问')
-        ticket=create_ticket(self.owner,{'request_key':uuid.uuid4(),'title':'ZDEMO001接口','description':'synthetic',
+        # Untyped identifiers in the body are not automatic metadata targets.
+        ticket=create_ticket(self.owner,{'request_key':uuid.uuid4(),'title':'接口排查','description':'ZDEMO001接口 synthetic',
             'system':'DS4','module':'MM','kind':'问题'},[])[0]
         self.ticket=change_ticket_status(self.admin,ticket.pk,{'version':ticket.version,'action':'start'})
         self.lease=ai.claim(self.ticket.pk,self.ticket.version)
